@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:saferide/core/constants/api_constants.dart';
 import 'package:saferide/core/errors/exceptions.dart';
 import 'package:saferide/features/auth/data/models/user_model.dart';
@@ -9,12 +10,15 @@ import 'package:saferide/features/auth/data/models/user_model.dart';
 class AuthRemoteDatasource {
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
+  final GoogleSignIn _googleSignIn;
 
   AuthRemoteDatasource({
     required FirebaseAuth auth,
     required FirebaseFirestore firestore,
+    GoogleSignIn? googleSignIn,
   })  : _auth = auth,
-        _firestore = firestore;
+        _firestore = firestore,
+        _googleSignIn = googleSignIn ?? GoogleSignIn();
 
   Future<String> sendOtp(String phoneNumber) async {
     final completer = Completer<String>();
@@ -23,6 +27,9 @@ class AuthRemoteDatasource {
       phoneNumber: phoneNumber,
       timeout: const Duration(seconds: 60),
       verificationCompleted: (credential) async {
+        if (!completer.isCompleted) {
+          completer.complete('auto-verified');
+        }
         await _auth.signInWithCredential(credential);
       },
       verificationFailed: (e) {
@@ -60,33 +67,7 @@ class AuthRemoteDatasource {
 
       final userCredential =
           await _auth.signInWithCredential(credential);
-      final firebaseUser = userCredential.user!;
-
-      // Check if user exists in Firestore
-      final doc = await _firestore
-          .collection(ApiConstants.usersCollection)
-          .doc(firebaseUser.uid)
-          .get();
-
-      if (doc.exists) {
-        return UserModel.fromJson(doc.data()!);
-      }
-
-      // Create new user document
-      final now = DateTime.now();
-      final userModel = UserModel(
-        uid: firebaseUser.uid,
-        phoneNumber: firebaseUser.phoneNumber ?? '',
-        createdAt: now,
-        updatedAt: now,
-      );
-
-      await _firestore
-          .collection(ApiConstants.usersCollection)
-          .doc(firebaseUser.uid)
-          .set(userModel.toJson());
-
-      return userModel;
+      return _getOrCreateUser(userCredential);
     } on FirebaseAuthException catch (e) {
       throw AuthException(
         message: e.message ?? 'OTP verification failed',
@@ -95,8 +76,79 @@ class AuthRemoteDatasource {
     }
   }
 
+  Future<UserModel> signInWithGoogle() async {
+    try {
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        throw const AuthException(
+          message: 'Google sign-in was cancelled',
+          code: 'sign-in-cancelled',
+        );
+      }
+
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final userCredential =
+          await _auth.signInWithCredential(credential);
+      return _getOrCreateUser(userCredential);
+    } on AuthException {
+      rethrow;
+    } on FirebaseAuthException catch (e) {
+      throw AuthException(
+        message: e.message ?? 'Google sign-in failed',
+        code: e.code,
+      );
+    } catch (e) {
+      throw AuthException(
+        message: e.toString(),
+        code: 'google-sign-in-failed',
+      );
+    }
+  }
+
+  Future<UserModel> _getOrCreateUser(
+    UserCredential userCredential,
+  ) async {
+    final firebaseUser = userCredential.user!;
+
+    final doc = await _firestore
+        .collection(ApiConstants.usersCollection)
+        .doc(firebaseUser.uid)
+        .get();
+
+    if (doc.exists) {
+      return UserModel.fromJson(doc.data()!);
+    }
+
+    // Create new user document
+    final now = DateTime.now();
+    final userModel = UserModel(
+      uid: firebaseUser.uid,
+      phoneNumber: firebaseUser.phoneNumber ?? '',
+      email: firebaseUser.email,
+      displayName: firebaseUser.displayName,
+      photoUrl: firebaseUser.photoURL,
+      createdAt: now,
+      updatedAt: now,
+    );
+
+    await _firestore
+        .collection(ApiConstants.usersCollection)
+        .doc(firebaseUser.uid)
+        .set(userModel.toJson());
+
+    return userModel;
+  }
+
   Future<void> signOut() async {
-    await _auth.signOut();
+    await Future.wait([
+      _auth.signOut(),
+      _googleSignIn.signOut(),
+    ]);
   }
 
   Future<UserModel?> getCurrentUser() async {

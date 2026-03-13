@@ -97,7 +97,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'otp',
             redirect: (context, state) {
-              if (state.extra == null) {
+              final extra = state.extra;
+              if (extra is! String || extra.isEmpty) {
                 return RouteNames.auth;
               }
               return null;

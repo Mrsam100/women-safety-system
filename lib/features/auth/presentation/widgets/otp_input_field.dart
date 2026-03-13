@@ -22,6 +22,7 @@ class OtpInputField extends StatefulWidget {
 class OtpInputFieldState extends State<OtpInputField> {
   late final List<TextEditingController> _controllers;
   late final List<FocusNode> _focusNodes;
+  late final List<FocusNode> _keyListenerFocusNodes;
 
   @override
   void initState() {
@@ -34,6 +35,10 @@ class OtpInputFieldState extends State<OtpInputField> {
       widget.length,
       (_) => FocusNode(),
     );
+    _keyListenerFocusNodes = List.generate(
+      widget.length,
+      (_) => FocusNode(),
+    );
   }
 
   @override
@@ -42,6 +47,9 @@ class OtpInputFieldState extends State<OtpInputField> {
       c.dispose();
     }
     for (final f in _focusNodes) {
+      f.dispose();
+    }
+    for (final f in _keyListenerFocusNodes) {
       f.dispose();
     }
     super.dispose();
@@ -69,9 +77,10 @@ class OtpInputFieldState extends State<OtpInputField> {
     }
   }
 
-  void _onKeyDown(int index, RawKeyEvent event) {
-    if (event is RawKeyDownEvent &&
-        event.logicalKey == LogicalKeyboardKey.backspace &&
+  void _onKeyEvent(int index, KeyEvent event) {
+    if (event is KeyDownEvent &&
+        event.logicalKey ==
+            LogicalKeyboardKey.backspace &&
         _controllers[index].text.isEmpty &&
         index > 0) {
       _controllers[index - 1].clear();
@@ -85,33 +94,63 @@ class OtpInputFieldState extends State<OtpInputField> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(widget.length, (index) {
-            return SizedBox(
-              width: 48,
-              height: 56,
-              child: RawKeyboardListener(
-                focusNode: FocusNode(),
-                onKey: (event) => _onKeyDown(index, event),
+            final hasValue =
+                _controllers[index].text.isNotEmpty;
+            return Container(
+              width: 50,
+              height: 58,
+              margin: EdgeInsets.only(
+                right:
+                    index < widget.length - 1 ? 10 : 0,
+              ),
+              child: KeyboardListener(
+                focusNode:
+                    _keyListenerFocusNodes[index],
+                onKeyEvent: (event) =>
+                    _onKeyEvent(index, event),
                 child: TextField(
                   controller: _controllers[index],
                   focusNode: _focusNodes[index],
                   textAlign: TextAlign.center,
                   keyboardType: TextInputType.number,
                   maxLength: 1,
-                  style: const TextStyle(
-                    fontSize: 24,
+                  style: TextStyle(
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
+                    color: hasValue
+                        ? AppColors.primary
+                        : AppColors.textPrimary,
                   ),
                   decoration: InputDecoration(
                     counterText: '',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(
+                    filled: true,
+                    fillColor: hasValue
+                        ? AppColors.primary
+                            .withValues(alpha: 0.06)
+                        : AppColors.background,
+                    contentPadding:
+                        const EdgeInsets.symmetric(
+                      vertical: 16,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius:
+                          BorderRadius.circular(
                         AppDimensions.radiusMD,
+                      ),
+                      borderSide: BorderSide(
+                        color: hasValue
+                            ? AppColors.primary
+                                .withValues(
+                                    alpha: 0.3)
+                            : AppColors.divider,
+                        width: 1.5,
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(
+                      borderRadius:
+                          BorderRadius.circular(
                         AppDimensions.radiusMD,
                       ),
                       borderSide: const BorderSide(
@@ -119,9 +158,20 @@ class OtpInputFieldState extends State<OtpInputField> {
                         width: 2,
                       ),
                     ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius:
+                          BorderRadius.circular(
+                        AppDimensions.radiusMD,
+                      ),
+                      borderSide: const BorderSide(
+                        color: AppColors.danger,
+                        width: 1.5,
+                      ),
+                    ),
                   ),
                   inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
+                    FilteringTextInputFormatter
+                        .digitsOnly,
                   ],
                   onChanged: (value) =>
                       _onChanged(index, value),
@@ -131,12 +181,16 @@ class OtpInputFieldState extends State<OtpInputField> {
           }),
         ),
         if (widget.errorText != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            widget.errorText!,
-            style: const TextStyle(
-              color: AppColors.danger,
-              fontSize: 12,
+          const SizedBox(
+            height: AppDimensions.paddingSM,
+          ),
+          Center(
+            child: Text(
+              widget.errorText!,
+              style: const TextStyle(
+                color: AppColors.danger,
+                fontSize: 13,
+              ),
             ),
           ),
         ],

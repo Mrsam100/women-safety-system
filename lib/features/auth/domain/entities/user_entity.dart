@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 class UserEntity {
   final String uid;
   final String phoneNumber;
+  final String? email;
   final String? displayName;
   final String? photoUrl;
   final String? bloodGroup;
@@ -17,6 +18,7 @@ class UserEntity {
   const UserEntity({
     required this.uid,
     required this.phoneNumber,
+    this.email,
     this.displayName,
     this.photoUrl,
     this.bloodGroup,
@@ -34,6 +36,7 @@ class UserEntity {
   UserEntity copyWith({
     String? uid,
     String? phoneNumber,
+    String? email,
     String? displayName,
     String? photoUrl,
     String? bloodGroup,
@@ -47,6 +50,7 @@ class UserEntity {
     return UserEntity(
       uid: uid ?? this.uid,
       phoneNumber: phoneNumber ?? this.phoneNumber,
+      email: email ?? this.email,
       displayName: displayName ?? this.displayName,
       photoUrl: photoUrl ?? this.photoUrl,
       bloodGroup: bloodGroup ?? this.bloodGroup,

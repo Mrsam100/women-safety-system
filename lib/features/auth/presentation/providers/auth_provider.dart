@@ -123,7 +123,14 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<void> verifyOtp(String otp) async {
-    if (state.verificationId == null) return;
+    if (state.verificationId == null) {
+      state = state.copyWith(
+        status: AuthStatus.error,
+        errorMessage: 'Verification session not found. '
+            'Please request a new OTP.',
+      );
+      return;
+    }
 
     state = state.copyWith(status: AuthStatus.verifying);
 
@@ -173,15 +180,28 @@ class AuthNotifier extends Notifier<AuthState> {
       case 'user-disabled':
         return 'This account has been disabled. '
             'Please contact support.';
+      case 'invalid-verification-id':
+        return 'Verification session expired. '
+            'Please request a new OTP.';
+      case 'operation-not-allowed':
+        return 'Phone authentication is not enabled. '
+            'Please contact support.';
+      case 'credential-already-in-use':
+        return 'This phone number is already linked '
+            'to another account.';
       default:
         return 'Something went wrong. Please try again.';
     }
   }
 
   void clearError() {
-    state = state.copyWith(
-      status: AuthStatus.initial,
-      errorMessage: null,
+    state = AuthState(
+      status: state.verificationId != null
+          ? AuthStatus.otpSent
+          : AuthStatus.initial,
+      verificationId: state.verificationId,
+      phoneNumber: state.phoneNumber,
+      user: state.user,
     );
   }
 }

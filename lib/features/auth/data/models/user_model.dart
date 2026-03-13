@@ -4,6 +4,7 @@ import 'package:saferide/features/auth/domain/entities/user_entity.dart';
 class UserModel {
   final String uid;
   final String phoneNumber;
+  final String? email;
   final String? displayName;
   final String? photoUrl;
   final String? bloodGroup;
@@ -17,6 +18,7 @@ class UserModel {
   const UserModel({
     required this.uid,
     required this.phoneNumber,
+    this.email,
     this.displayName,
     this.photoUrl,
     this.bloodGroup,
@@ -32,6 +34,7 @@ class UserModel {
     return UserModel(
       uid: json['uid'] as String? ?? '',
       phoneNumber: json['phoneNumber'] as String? ?? '',
+      email: json['email'] as String?,
       displayName: json['displayName'] as String?,
       photoUrl: json['photoUrl'] as String?,
       bloodGroup: json['bloodGroup'] as String?,
@@ -53,6 +56,7 @@ class UserModel {
     return {
       'uid': uid,
       'phoneNumber': phoneNumber,
+      'email': email,
       'displayName': displayName,
       'photoUrl': photoUrl,
       'bloodGroup': bloodGroup,
@@ -69,6 +73,7 @@ class UserModel {
     return UserEntity(
       uid: uid,
       phoneNumber: phoneNumber,
+      email: email,
       displayName: displayName,
       photoUrl: photoUrl,
       bloodGroup: bloodGroup,
@@ -85,6 +90,7 @@ class UserModel {
     return UserModel(
       uid: entity.uid,
       phoneNumber: entity.phoneNumber,
+      email: entity.email,
       displayName: entity.displayName,
       photoUrl: entity.photoUrl,
       bloodGroup: entity.bloodGroup,
