@@ -27,6 +27,7 @@ class _PhoneInputScreenState
   late final AnimationController _animController;
   late final Animation<double> _fadeIn;
   late final Animation<Offset> _slideUp;
+  bool _showPhoneInput = false;
 
   @override
   void initState() {
@@ -65,11 +66,20 @@ class _PhoneInputScreenState
     }
   }
 
+  void _onGoogleSignIn() {
+    ref
+        .read(authNotifierProvider.notifier)
+        .signInWithGoogle();
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authNotifierProvider);
     final isSending =
         authState.status == AuthStatus.sendingOtp;
+    final isGoogleLoading =
+        authState.status == AuthStatus.signingInWithGoogle;
+    final isLoading = isSending || isGoogleLoading;
 
     ref.listen<AuthState>(authNotifierProvider, (prev, next) {
       if (next.status == AuthStatus.otpSent) {
@@ -89,21 +99,21 @@ class _PhoneInputScreenState
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
             colors: [
               AppColors.primary,
               Color(0xFF8B5CF6),
+              Color(0xFF7C3AED),
             ],
-            stops: [0.0, 0.45],
           ),
         ),
         child: SafeArea(
           child: Column(
             children: [
-              // Top section with branding
+              // Top branding section
               Expanded(
-                flex: 4,
+                flex: _showPhoneInput ? 3 : 4,
                 child: FadeTransition(
                   opacity: _fadeIn,
                   child: Column(
@@ -111,19 +121,22 @@ class _PhoneInputScreenState
                         MainAxisAlignment.center,
                     children: [
                       Container(
-                        width: 80,
-                        height: 80,
+                        width: 90,
+                        height: 90,
                         decoration: BoxDecoration(
                           color: Colors.white
-                              .withValues(alpha: 0.2),
+                              .withValues(alpha: 0.15),
                           borderRadius:
-                              BorderRadius.circular(
-                            AppDimensions.radiusXL,
+                              BorderRadius.circular(28),
+                          border: Border.all(
+                            color: Colors.white
+                                .withValues(alpha: 0.3),
+                            width: 1.5,
                           ),
                         ),
                         child: const Icon(
                           Icons.shield_outlined,
-                          size: 42,
+                          size: 46,
                           color: Colors.white,
                         ),
                       ),
@@ -147,7 +160,8 @@ class _PhoneInputScreenState
                         AppStrings.appTagline,
                         style: context.textTheme.bodyLarge
                             ?.copyWith(
-                          color: Colors.white70,
+                          color: Colors.white
+                              .withValues(alpha: 0.8),
                         ),
                       ),
                     ],
@@ -155,9 +169,9 @@ class _PhoneInputScreenState
                 ),
               ),
 
-              // Bottom card with phone input
+              // Bottom card with auth options
               Expanded(
-                flex: 5,
+                flex: _showPhoneInput ? 6 : 5,
                 child: SlideTransition(
                   position: _slideUp,
                   child: FadeTransition(
@@ -171,79 +185,80 @@ class _PhoneInputScreenState
                           topRight: Radius.circular(32),
                         ),
                       ),
-                      child: Padding(
+                      child: SingleChildScrollView(
                         padding:
                             const EdgeInsets.symmetric(
                           horizontal:
                               AppDimensions.paddingLG,
                         ),
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(
-                                height: AppDimensions
-                                    .paddingXL,
+                        child: Column(
+                          crossAxisAlignment:
+                              CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(
+                              height:
+                                  AppDimensions.paddingXL,
+                            ),
+                            Text(
+                              'Get Started',
+                              style: context.textTheme
+                                  .headlineSmall
+                                  ?.copyWith(
+                                fontWeight:
+                                    FontWeight.bold,
+                                color:
+                                    AppColors.textPrimary,
                               ),
-                              Text(
-                                'Welcome',
-                                style: context.textTheme
-                                    .headlineSmall
-                                    ?.copyWith(
-                                  fontWeight:
-                                      FontWeight.bold,
-                                  color: AppColors
-                                      .textPrimary,
+                            ),
+                            const SizedBox(
+                              height:
+                                  AppDimensions.paddingXS,
+                            ),
+                            Text(
+                              'Sign in to keep yourself '
+                              'safe on every ride',
+                              style: context
+                                  .textTheme.bodyMedium
+                                  ?.copyWith(
+                                color: AppColors
+                                    .textSecondary,
+                              ),
+                            ),
+                            const SizedBox(
+                              height:
+                                  AppDimensions.paddingXL,
+                            ),
+
+                            // Google Sign-In Button
+                            _GoogleSignInButton(
+                              isLoading: isGoogleLoading,
+                              onPressed: isLoading
+                                  ? null
+                                  : _onGoogleSignIn,
+                            ),
+                            const SizedBox(
+                              height:
+                                  AppDimensions.paddingMD,
+                            ),
+
+                            // Divider with "or"
+                            Row(
+                              children: [
+                                const Expanded(
+                                  child: Divider(
+                                    color:
+                                        AppColors.divider,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(
-                                height: AppDimensions
-                                    .paddingXS,
-                              ),
-                              Text(
-                                'Enter your phone number '
-                                'to get started',
-                                style: context
-                                    .textTheme.bodyMedium
-                                    ?.copyWith(
-                                  color: AppColors
-                                      .textSecondary,
-                                ),
-                              ),
-                              const SizedBox(
-                                height: AppDimensions
-                                    .paddingXL,
-                              ),
-                              PhoneInputField(
-                                controller:
-                                    _phoneController,
-                                onSubmitted: _onSendOtp,
-                                validator: Validators
-                                    .validatePhone,
-                              ),
-                              const Spacer(),
-                              AppButton(
-                                text: AppStrings.sendOtp,
-                                isLoading: isSending,
-                                onPressed: _onSendOtp,
-                              ),
-                              const SizedBox(
-                                height: AppDimensions
-                                    .paddingSM,
-                              ),
-                              Center(
-                                child: Padding(
-                                  padding:
-                                      const EdgeInsets
-                                          .only(
-                                    bottom: AppDimensions
-                                        .paddingMD,
+                                Padding(
+                                  padding: const EdgeInsets
+                                      .symmetric(
+                                    horizontal:
+                                        AppDimensions
+                                            .paddingMD,
                                   ),
                                   child: Text(
-                                    'We\'ll send you a '
-                                    'verification code',
+                                    'or',
                                     style: context
                                         .textTheme
                                         .bodySmall
@@ -253,9 +268,133 @@ class _PhoneInputScreenState
                                     ),
                                   ),
                                 ),
+                                const Expanded(
+                                  child: Divider(
+                                    color:
+                                        AppColors.divider,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(
+                              height:
+                                  AppDimensions.paddingMD,
+                            ),
+
+                            // Phone sign-in toggle
+                            if (!_showPhoneInput)
+                              AppButton(
+                                text:
+                                    'Continue with Phone',
+                                isOutlined: true,
+                                icon:
+                                    Icons.phone_outlined,
+                                onPressed: isLoading
+                                    ? null
+                                    : () => setState(
+                                        () =>
+                                            _showPhoneInput =
+                                                true,
+                                      ),
+                              ),
+
+                            // Phone input section
+                            if (_showPhoneInput) ...[
+                              Form(
+                                key: _formKey,
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment
+                                          .start,
+                                  children: [
+                                    PhoneInputField(
+                                      controller:
+                                          _phoneController,
+                                      onSubmitted:
+                                          _onSendOtp,
+                                      validator:
+                                          Validators
+                                              .validatePhone,
+                                    ),
+                                    const SizedBox(
+                                      height:
+                                          AppDimensions
+                                              .paddingMD,
+                                    ),
+                                    AppButton(
+                                      text: AppStrings
+                                          .sendOtp,
+                                      isLoading:
+                                          isSending,
+                                      onPressed:
+                                          isLoading
+                                              ? null
+                                              : _onSendOtp,
+                                    ),
+                                    const SizedBox(
+                                      height:
+                                          AppDimensions
+                                              .paddingSM,
+                                    ),
+                                    Center(
+                                      child: TextButton(
+                                        onPressed: () =>
+                                            setState(
+                                          () =>
+                                              _showPhoneInput =
+                                                  false,
+                                        ),
+                                        child: Text(
+                                          'Back to '
+                                          'sign-in '
+                                          'options',
+                                          style: context
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                            color:
+                                                AppColors
+                                                    .primary,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
-                          ),
+
+                            const SizedBox(
+                              height:
+                                  AppDimensions.paddingXL,
+                            ),
+
+                            // Terms text
+                            Center(
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.only(
+                                  bottom: AppDimensions
+                                      .paddingMD,
+                                ),
+                                child: Text(
+                                  'By continuing, you '
+                                  'agree to our Terms of '
+                                  'Service and '
+                                  'Privacy Policy',
+                                  textAlign:
+                                      TextAlign.center,
+                                  style: context.textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                    color: AppColors
+                                        .textSecondary,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -265,6 +404,86 @@ class _PhoneInputScreenState
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _GoogleSignInButton extends StatelessWidget {
+  final bool isLoading;
+  final VoidCallback? onPressed;
+
+  const _GoogleSignInButton({
+    required this.isLoading,
+    this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(
+            color: AppColors.divider,
+            width: 1.5,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(
+              AppDimensions.radiusLG,
+            ),
+          ),
+          backgroundColor: AppColors.surface,
+          elevation: 0,
+        ),
+        child: isLoading
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.textSecondary,
+                ),
+              )
+            : Row(
+                mainAxisAlignment:
+                    MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      borderRadius:
+                          BorderRadius.circular(4),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'G',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF4285F4),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(
+                    width: AppDimensions.paddingSM,
+                  ),
+                  Text(
+                    'Continue with Google',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyLarge
+                        ?.copyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
       ),
     );
   }

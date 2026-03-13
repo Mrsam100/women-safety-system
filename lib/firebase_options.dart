@@ -19,30 +19,34 @@ class DefaultFirebaseOptions {
   }
 
   // TODO: Replace these placeholder values with actual
-  // Firebase project configuration from flutterfire configure
+
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'YOUR_ANDROID_API_KEY',
-    appId: 'YOUR_ANDROID_APP_ID',
-    messagingSenderId: 'YOUR_SENDER_ID',
-    projectId: 'YOUR_PROJECT_ID',
-    storageBucket: 'YOUR_STORAGE_BUCKET',
+    apiKey: 'AIzaSyCneA4OO6dSK21cwtDknfEOLVynDZvunK0',
+    appId: '1:152026825458:android:2b69859d916da5ae69466b',
+    messagingSenderId: '152026825458',
+    projectId: 'safegirls-75937',
+    storageBucket: 'safegirls-75937.firebasestorage.app',
   );
 
+  // Firebase project configuration from flutterfire configure
+
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'YOUR_IOS_API_KEY',
-    appId: 'YOUR_IOS_APP_ID',
-    messagingSenderId: 'YOUR_SENDER_ID',
-    projectId: 'YOUR_PROJECT_ID',
-    storageBucket: 'YOUR_STORAGE_BUCKET',
-    iosBundleId: 'com.saferide.app',
+    apiKey: 'AIzaSyDo-HqpY1XW9vqwOIJARdQZYoD6iLyq7_o',
+    appId: '1:152026825458:ios:d3ec92f64220c9a269466b',
+    messagingSenderId: '152026825458',
+    projectId: 'safegirls-75937',
+    storageBucket: 'safegirls-75937.firebasestorage.app',
+    iosBundleId: 'com.saferide.saferide',
   );
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'YOUR_WEB_API_KEY',
-    appId: 'YOUR_WEB_APP_ID',
-    messagingSenderId: 'YOUR_SENDER_ID',
-    projectId: 'YOUR_PROJECT_ID',
-    storageBucket: 'YOUR_STORAGE_BUCKET',
-    authDomain: 'YOUR_AUTH_DOMAIN',
+    apiKey: 'AIzaSyDfnFReU0oLn63vJzp7aCwIEUzM9cTbzE8',
+    appId: '1:152026825458:web:0332749e2606bc9369466b',
+    messagingSenderId: '152026825458',
+    projectId: 'safegirls-75937',
+    authDomain: 'safegirls-75937.firebaseapp.com',
+    storageBucket: 'safegirls-75937.firebasestorage.app',
+    measurementId: 'G-MRS5J2LR54',
   );
+
 }

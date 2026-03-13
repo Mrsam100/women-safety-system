@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:saferide/core/constants/api_constants.dart';
 import 'package:saferide/core/errors/exceptions.dart';
@@ -10,7 +11,7 @@ import 'package:saferide/features/auth/data/models/user_model.dart';
 class AuthRemoteDatasource {
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
-  final GoogleSignIn _googleSignIn;
+  GoogleSignIn? _googleSignIn;
 
   AuthRemoteDatasource({
     required FirebaseAuth auth,
@@ -18,7 +19,12 @@ class AuthRemoteDatasource {
     GoogleSignIn? googleSignIn,
   })  : _auth = auth,
         _firestore = firestore,
-        _googleSignIn = googleSignIn ?? GoogleSignIn();
+        _googleSignIn = googleSignIn;
+
+  /// Lazy init GoogleSignIn — only used on mobile,
+  /// crashes on web without clientId.
+  GoogleSignIn get _google =>
+      _googleSignIn ??= GoogleSignIn();
 
   Future<String> sendOtp(String phoneNumber) async {
     final completer = Completer<String>();
@@ -76,24 +82,65 @@ class AuthRemoteDatasource {
     }
   }
 
+  /// Start Google sign-in redirect (web only).
+  /// After redirect back, [checkGoogleRedirectResult]
+  /// picks up the result.
+  Future<void> startGoogleSignInRedirect() async {
+    final googleProvider = GoogleAuthProvider();
+    googleProvider.addScope('email');
+    googleProvider.addScope('profile');
+    await _auth.signInWithRedirect(googleProvider);
+  }
+
+  /// Check if the user is returning from a Google
+  /// sign-in redirect. Returns null if not.
+  Future<UserModel?> checkGoogleRedirectResult() async {
+    try {
+      final result = await _auth.getRedirectResult();
+      if (result.user != null) {
+        return _getOrCreateUser(result);
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<UserModel> signInWithGoogle() async {
     try {
-      final googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
+      final UserCredential userCredential;
+
+      if (kIsWeb) {
+        // On web, use redirect flow to avoid COOP issues
+        await startGoogleSignInRedirect();
+        // Page will redirect away — this won't execute.
+        // The result is handled by checkGoogleRedirectResult
+        // when the app reloads after redirect.
         throw const AuthException(
-          message: 'Google sign-in was cancelled',
+          message: 'Redirecting to Google sign-in...',
           code: 'sign-in-cancelled',
         );
+      } else {
+        // On mobile, use google_sign_in package
+        final googleUser = await _google.signIn();
+        if (googleUser == null) {
+          throw const AuthException(
+            message: 'Google sign-in was cancelled',
+            code: 'sign-in-cancelled',
+          );
+        }
+
+        final googleAuth =
+            await googleUser.authentication;
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+
+        userCredential =
+            await _auth.signInWithCredential(credential);
       }
 
-      final googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      final userCredential =
-          await _auth.signInWithCredential(credential);
       return _getOrCreateUser(userCredential);
     } on AuthException {
       rethrow;
@@ -145,10 +192,11 @@ class AuthRemoteDatasource {
   }
 
   Future<void> signOut() async {
-    await Future.wait([
-      _auth.signOut(),
-      _googleSignIn.signOut(),
-    ]);
+    final futures = <Future>[_auth.signOut()];
+    if (!kIsWeb) {
+      futures.add(_google.signOut());
+    }
+    await Future.wait(futures);
   }
 
   Future<UserModel?> getCurrentUser() async {

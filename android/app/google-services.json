@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "152026825458",
+    "project_id": "safegirls-75937",
+    "storage_bucket": "safegirls-75937.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:152026825458:android:66968971c1f9148a69466b",
+        "android_client_info": {
+          "package_name": "com.saferide.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCneA4OO6dSK21cwtDknfEOLVynDZvunK0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:152026825458:android:2b69859d916da5ae69466b",
+        "android_client_info": {
+          "package_name": "com.saferide.saferide"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCneA4OO6dSK21cwtDknfEOLVynDZvunK0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

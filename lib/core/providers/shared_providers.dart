@@ -70,7 +70,12 @@ class OnboardingCompleteNotifier extends Notifier<bool> {
         false;
   }
 
-  void set(bool value) => state = value;
+  void set(bool value) {
+    state = value;
+    ref
+        .read(localStorageServiceProvider)
+        .saveSetting('onboarding_complete', value);
+  }
 }
 
 final onboardingCompleteProvider =
@@ -89,7 +94,12 @@ class ProfileCompleteNotifier extends Notifier<bool> {
         false;
   }
 
-  void set(bool value) => state = value;
+  void set(bool value) {
+    state = value;
+    ref
+        .read(localStorageServiceProvider)
+        .saveSetting('profile_complete', value);
+  }
 }
 
 final profileCompleteProvider =

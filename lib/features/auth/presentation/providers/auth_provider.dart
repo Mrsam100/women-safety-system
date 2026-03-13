@@ -1,10 +1,13 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:saferide/features/auth/data/models/user_model.dart';
 import 'package:saferide/core/providers/firebase_providers.dart';
 import 'package:saferide/features/auth/data/datasources/auth_remote_datasource.dart';
 import 'package:saferide/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:saferide/features/auth/domain/entities/user_entity.dart';
 import 'package:saferide/features/auth/domain/repositories/auth_repository.dart';
 import 'package:saferide/features/auth/domain/usecases/send_otp.dart';
+import 'package:saferide/features/auth/domain/usecases/sign_in_with_google.dart';
 import 'package:saferide/features/auth/domain/usecases/sign_out.dart'
     as sign_out_usecase;
 import 'package:saferide/features/auth/domain/usecases/verify_otp.dart';
@@ -34,6 +37,12 @@ final verifyOtpProvider = Provider<VerifyOtp>(
   (ref) => VerifyOtp(ref.watch(authRepositoryProvider)),
 );
 
+final signInWithGoogleProvider =
+    Provider<SignInWithGoogle>(
+  (ref) =>
+      SignInWithGoogle(ref.watch(authRepositoryProvider)),
+);
+
 final signOutProvider =
     Provider<sign_out_usecase.SignOut>(
   (ref) => sign_out_usecase.SignOut(
@@ -47,6 +56,7 @@ enum AuthStatus {
   sendingOtp,
   otpSent,
   verifying,
+  signingInWithGoogle,
   authenticated,
   unauthenticated,
   error,
@@ -88,14 +98,38 @@ class AuthState {
 class AuthNotifier extends Notifier<AuthState> {
   @override
   AuthState build() {
+    // On web, check for Google redirect result on init
+    if (kIsWeb) {
+      _checkGoogleRedirectResult();
+    }
     return const AuthState();
   }
 
   SendOtp get _sendOtp => ref.read(sendOtpProvider);
   VerifyOtp get _verifyOtp =>
       ref.read(verifyOtpProvider);
+  SignInWithGoogle get _signInWithGoogle =>
+      ref.read(signInWithGoogleProvider);
   sign_out_usecase.SignOut get _signOut =>
       ref.read(signOutProvider);
+
+  Future<void> _checkGoogleRedirectResult() async {
+    try {
+      final datasource =
+          ref.read(authRemoteDatasourceProvider);
+      final userModel =
+          await datasource.checkGoogleRedirectResult();
+      if (userModel != null) {
+        final entity = userModel.toEntity();
+        state = state.copyWith(
+          status: AuthStatus.authenticated,
+          user: entity,
+        );
+      }
+    } catch (_) {
+      // No redirect result — normal app load
+    }
+  }
 
   Future<void> sendOtp(String phoneNumber) async {
     state = state.copyWith(
@@ -150,6 +184,50 @@ class AuthNotifier extends Notifier<AuthState> {
     );
   }
 
+  Future<void> signInWithGoogle() async {
+    state = state.copyWith(
+      status: AuthStatus.signingInWithGoogle,
+    );
+
+    if (kIsWeb) {
+      // On web, redirect to Google sign-in page.
+      // After sign-in, page reloads and
+      // _checkGoogleRedirectResult picks up the result.
+      try {
+        final datasource =
+            ref.read(authRemoteDatasourceProvider);
+        await datasource.startGoogleSignInRedirect();
+      } catch (e) {
+        state = state.copyWith(
+          status: AuthStatus.error,
+          errorMessage:
+              _mapErrorMessage('google-sign-in-failed'),
+        );
+      }
+      return;
+    }
+
+    // Mobile flow
+    final result = await _signInWithGoogle();
+    result.fold(
+      (failure) {
+        if (failure.message.contains('cancelled')) {
+          state = const AuthState();
+          return;
+        }
+        state = state.copyWith(
+          status: AuthStatus.error,
+          errorMessage:
+              _mapErrorMessage(failure.message),
+        );
+      },
+      (user) => state = state.copyWith(
+        status: AuthStatus.authenticated,
+        user: user,
+      ),
+    );
+  }
+
   Future<void> signOut() async {
     await _signOut();
     state = const AuthState(
@@ -184,11 +262,17 @@ class AuthNotifier extends Notifier<AuthState> {
         return 'Verification session expired. '
             'Please request a new OTP.';
       case 'operation-not-allowed':
-        return 'Phone authentication is not enabled. '
+        return 'This sign-in method is not enabled. '
             'Please contact support.';
       case 'credential-already-in-use':
-        return 'This phone number is already linked '
-            'to another account.';
+        return 'This account is already linked '
+            'to another user.';
+      case 'account-exists-with-different-credential':
+        return 'An account already exists with the '
+            'same email. Try a different sign-in method.';
+      case 'google-sign-in-failed':
+        return 'Google sign-in failed. '
+            'Please try again.';
       default:
         return 'Something went wrong. Please try again.';
     }

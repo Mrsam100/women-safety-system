@@ -14,6 +14,10 @@ abstract class AuthRepository {
     required String otp,
   });
 
+  /// Sign in with Google OAuth.
+  /// Returns the authenticated user on success.
+  Future<Either<Failure, UserEntity>> signInWithGoogle();
+
   /// Sign out the current user.
   Future<Either<Failure, void>> signOut();
 

@@ -27,6 +27,12 @@ Future<void> main() async {
     final localStorage = LocalStorageService();
     await localStorage.initialize();
 
+    // TODO: Remove after testing — resets onboarding flow
+    await localStorage.saveSetting(
+        'onboarding_complete', false);
+    await localStorage.saveSetting(
+        'profile_complete', false);
+
     // Initialize push notifications (FCM + local)
     final notificationService = NotificationService();
     await notificationService.initialize();

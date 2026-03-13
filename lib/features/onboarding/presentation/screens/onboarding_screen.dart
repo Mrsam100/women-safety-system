@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:saferide/core/constants/app_colors.dart';
-import 'package:saferide/core/constants/app_dimensions.dart';
 import 'package:saferide/core/constants/route_names.dart';
 import 'package:saferide/core/providers/shared_providers.dart';
 import 'package:saferide/features/onboarding/presentation/widgets/onboarding_page.dart';
@@ -16,66 +15,110 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 }
 
 class _OnboardingScreenState
-    extends ConsumerState<OnboardingScreen> {
+    extends ConsumerState<OnboardingScreen>
+    with SingleTickerProviderStateMixin {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
+  late final AnimationController _btnController;
+  late final Animation<double> _btnScale;
+
   static const _pages = [
-    _OnboardingData(
-      icon: Icons.shield,
-      title: 'Real-Time Safety',
+    _PageData(
+      icon: Icons.shield_rounded,
+      title: 'Real-Time Safety\nMonitoring',
       description:
-          'SafeRide monitors your cab rides in real-time '
-          'using GPS tracking and on-device AI to keep '
-          'you safe every step of the way.',
+          'AI-powered protection that watches over '
+          'your cab rides with GPS tracking and '
+          'intelligent threat detection.',
+      badge: 'ALWAYS PROTECTED',
       primaryColor: AppColors.primary,
       secondaryColor: AppColors.primaryLight,
+      features: [
+        'Live GPS tracking',
+        'On-device AI',
+        'Threat scoring',
+      ],
     ),
-    _OnboardingData(
-      icon: Icons.emergency,
-      title: 'Instant Emergency Alerts',
+    _PageData(
+      icon: Icons.notification_important_rounded,
+      title: 'One-Touch\nEmergency Alerts',
       description:
-          'Trigger a panic alert with a long press or '
-          'phone shake. Your emergency contacts receive '
-          'your live location and audio evidence '
-          'instantly.',
+          'Trigger instant alerts with a long press or '
+          'phone shake. Your contacts get your live '
+          'location and audio evidence immediately.',
+      badge: 'INSTANT RESPONSE',
       primaryColor: AppColors.danger,
       secondaryColor: Color(0xFFFF8A80),
+      features: [
+        'Shake to alert',
+        'Live location share',
+        'Audio evidence',
+      ],
     ),
-    _OnboardingData(
-      icon: Icons.route,
-      title: 'Smart Route Monitoring',
+    _PageData(
+      icon: Icons.alt_route_rounded,
+      title: 'Smart Route\nDeviation Alerts',
       description:
-          'SafeRide detects route deviations, unusual '
-          'stops, and speed anomalies. Get automatic '
-          'safety prompts and threat scoring throughout '
-          'your ride.',
+          'Get notified the moment your ride goes '
+          'off-route. Automatic detection of unusual '
+          'stops, speed changes, and path deviations.',
+      badge: 'ROUTE INTELLIGENCE',
       primaryColor: AppColors.safe,
       secondaryColor: Color(0xFF81C784),
+      features: [
+        'Route deviation',
+        'Speed monitoring',
+        'Area safety scores',
+      ],
     ),
-    _OnboardingData(
-      icon: Icons.lock,
-      title: 'Privacy First',
+    _PageData(
+      icon: Icons.lock_rounded,
+      title: 'Your Privacy\nIs Sacred',
       description:
-          'All audio processing happens on your device. '
-          'No data leaves your phone unless you trigger '
-          'an emergency. Your safety, your privacy.',
+          'All processing happens on your device. '
+          'No data leaves your phone unless you '
+          'trigger an emergency. Zero compromises.',
+      badge: 'PRIVACY FIRST',
       primaryColor: Color(0xFF2196F3),
       secondaryColor: Color(0xFF64B5F6),
+      features: [
+        'On-device only',
+        'AES-256 encrypted',
+        'Auto-delete 30 days',
+      ],
     ),
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _btnController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _btnScale = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(
+        parent: _btnController,
+        curve: Curves.easeInOut,
+      ),
+    );
+  }
+
+  @override
   void dispose() {
     _pageController.dispose();
+    _btnController.dispose();
     super.dispose();
   }
 
+  bool get _isLastPage => _currentPage == _pages.length - 1;
+
   void _nextPage() {
-    if (_currentPage < _pages.length - 1) {
+    if (!_isLastPage) {
       _pageController.nextPage(
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeInOut,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOutCubic,
       );
     } else {
       _completeOnboarding();
@@ -83,52 +126,91 @@ class _OnboardingScreenState
   }
 
   void _completeOnboarding() {
-    ref.read(onboardingCompleteProvider.notifier).set(
-        true);
+    ref.read(onboardingCompleteProvider.notifier).set(true);
     context.go(RouteNames.profileSetup);
   }
 
   @override
   Widget build(BuildContext context) {
-    final isLastPage = _currentPage == _pages.length - 1;
+    final bottomPad = MediaQuery.paddingOf(context).bottom;
+    final data = _pages[_currentPage];
 
     return Scaffold(
+      backgroundColor: AppColors.surface,
       body: Stack(
         children: [
-          // Page View
+          // Subtle background gradient that changes per page
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeOut,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  data.primaryColor.withValues(alpha: 0.04),
+                  AppColors.surface,
+                  AppColors.surface,
+                ],
+                stops: const [0.0, 0.4, 1.0],
+              ),
+            ),
+          ),
+
+          // Pages
           PageView.builder(
             controller: _pageController,
             itemCount: _pages.length,
-            onPageChanged: (index) {
-              setState(() => _currentPage = index);
-            },
+            onPageChanged: (i) => setState(() => _currentPage = i),
             itemBuilder: (context, index) {
-              final data = _pages[index];
+              final p = _pages[index];
               return OnboardingPage(
-                icon: data.icon,
-                title: data.title,
-                description: data.description,
-                primaryColor: data.primaryColor,
-                secondaryColor: data.secondaryColor,
+                icon: p.icon,
+                title: p.title,
+                description: p.description,
+                primaryColor: p.primaryColor,
+                secondaryColor: p.secondaryColor,
+                badge: p.badge,
+                features: p.features,
               );
             },
           ),
 
-          // Skip button (top-right)
+          // Skip button
           Positioned(
-            top: MediaQuery.paddingOf(context).top +
-                AppDimensions.paddingSM,
-            right: AppDimensions.paddingMD,
-            child: TextButton(
-              onPressed: _completeOnboarding,
-              child: Text(
-                'Skip',
-                style: Theme.of(context)
-                    .textTheme
-                    .labelLarge
-                    ?.copyWith(
-                  color: AppColors.textSecondary,
+            top: MediaQuery.paddingOf(context).top + 8,
+            right: 16,
+            child: AnimatedOpacity(
+              opacity: _isLastPage ? 0.0 : 1.0,
+              duration: const Duration(milliseconds: 250),
+              child: TextButton(
+                onPressed: _isLastPage
+                    ? null
+                    : _completeOnboarding,
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.textSecondary,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                 ),
+                child: const Text('Skip'),
+              ),
+            ),
+          ),
+
+          // Step indicator + page count (top-left)
+          Positioned(
+            top: MediaQuery.paddingOf(context).top + 16,
+            left: 24,
+            child: Text(
+              '${_currentPage + 1}/${_pages.length}',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
@@ -137,67 +219,78 @@ class _OnboardingScreenState
           Positioned(
             left: 0,
             right: 0,
-            bottom: MediaQuery.paddingOf(context).bottom +
-                AppDimensions.paddingLG,
+            bottom: bottomPad + 32,
             child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppDimensions.paddingLG,
-              ),
-              child: Row(
-                mainAxisAlignment:
-                    MainAxisAlignment.spaceBetween,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Dots indicator
+                  // Progress dots
                   Row(
+                    mainAxisAlignment:
+                        MainAxisAlignment.center,
                     children: List.generate(
                       _pages.length,
-                      (index) => _DotIndicator(
-                        isActive: index == _currentPage,
-                        color:
-                            _pages[_currentPage]
-                                .primaryColor,
+                      (i) => _ProgressDot(
+                        isActive: i == _currentPage,
+                        isPast: i < _currentPage,
+                        color: data.primaryColor,
                       ),
                     ),
                   ),
+                  const SizedBox(height: 32),
 
-                  // Next / Get Started button
-                  FilledButton(
-                    onPressed: _nextPage,
-                    style: FilledButton.styleFrom(
-                      backgroundColor:
-                          _pages[_currentPage].primaryColor,
-                      foregroundColor:
-                          AppColors.textOnPrimary,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isLastPage
-                            ? AppDimensions.paddingLG
-                            : AppDimensions.paddingMD,
-                        vertical:
-                            AppDimensions.paddingMD - 2,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(
-                          AppDimensions.radiusXL,
+                  // Main CTA button
+                  GestureDetector(
+                    onTapDown: (_) => _btnController.forward(),
+                    onTapUp: (_) {
+                      _btnController.reverse();
+                      _nextPage();
+                    },
+                    onTapCancel: () =>
+                        _btnController.reverse(),
+                    child: ScaleTransition(
+                      scale: _btnScale,
+                      child: AnimatedContainer(
+                        duration:
+                            const Duration(milliseconds: 350),
+                        curve: Curves.easeOut,
+                        width: double.infinity,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: data.primaryColor,
+                          borderRadius:
+                              BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: data.primaryColor
+                                  .withValues(alpha: 0.3),
+                              blurRadius: 20,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
                         ),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          isLastPage
-                              ? 'Get Started'
-                              : 'Next',
-                        ),
-                        if (!isLastPage) ...[
-                          const SizedBox(width: 4),
-                          const Icon(
-                            Icons.arrow_forward,
-                            size: 18,
+                        child: Center(
+                          child: AnimatedSwitcher(
+                            duration: const Duration(
+                              milliseconds: 200,
+                            ),
+                            child: Text(
+                              _isLastPage
+                                  ? 'Get Started'
+                                  : 'Continue',
+                              key: ValueKey(_isLastPage),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
                           ),
-                        ],
-                      ],
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -210,46 +303,53 @@ class _OnboardingScreenState
   }
 }
 
-class _DotIndicator extends StatelessWidget {
+class _ProgressDot extends StatelessWidget {
   final bool isActive;
+  final bool isPast;
   final Color color;
 
-  const _DotIndicator({
+  const _ProgressDot({
     required this.isActive,
+    required this.isPast,
     required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
-      margin: const EdgeInsets.only(right: 8),
-      width: isActive ? 24 : 8,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      width: isActive ? 28 : 8,
       height: 8,
       decoration: BoxDecoration(
         color: isActive
             ? color
-            : color.withOpacity(0.25),
-        borderRadius: BorderRadius.circular(
-          AppDimensions.radiusRound,
-        ),
+            : isPast
+                ? color.withValues(alpha: 0.4)
+                : color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(4),
       ),
     );
   }
 }
 
-class _OnboardingData {
+class _PageData {
   final IconData icon;
   final String title;
   final String description;
+  final String badge;
   final Color primaryColor;
   final Color secondaryColor;
+  final List<String> features;
 
-  const _OnboardingData({
+  const _PageData({
     required this.icon,
     required this.title,
     required this.description,
+    required this.badge,
     required this.primaryColor,
     required this.secondaryColor,
+    required this.features,
   });
 }

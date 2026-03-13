@@ -1,19 +1,15 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:saferide/core/constants/app_colors.dart';
-import 'package:saferide/core/constants/app_dimensions.dart';
-import 'package:saferide/core/constants/app_strings.dart';
 import 'package:saferide/core/constants/route_names.dart';
 import 'package:saferide/core/extensions/context_extensions.dart';
 import 'package:saferide/core/providers/firebase_providers.dart';
-import 'package:saferide/core/widgets/app_button.dart';
+import 'package:saferide/core/providers/shared_providers.dart';
 import 'package:saferide/core/widgets/app_text_field.dart';
 import 'package:saferide/features/profile/domain/entities/profile_entity.dart';
 import 'package:saferide/features/profile/presentation/providers/profile_provider.dart';
 import 'package:saferide/features/profile/presentation/widgets/avatar_picker.dart';
-import 'package:saferide/features/profile/presentation/widgets/medical_info_form.dart';
 
 class ProfileSetupScreen extends ConsumerStatefulWidget {
   const ProfileSetupScreen({super.key});
@@ -32,6 +28,10 @@ class _ProfileSetupScreenState
   String? _selectedBloodGroup;
   String? _localImagePath;
 
+  static const _bloodGroups = [
+    'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-',
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -42,6 +42,11 @@ class _ProfileSetupScreenState
     final user =
         ref.read(firebaseAuthProvider).currentUser;
     if (user == null) return;
+
+    if (user.displayName != null &&
+        user.displayName!.isNotEmpty) {
+      _nameController.text = user.displayName!;
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref
@@ -81,19 +86,19 @@ class _ProfileSetupScreenState
     if (user == null) return;
 
     final now = DateTime.now();
-    final existingProfile =
+    final existing =
         ref.read(profileNotifierProvider).profile;
 
     final entity = ProfileEntity(
       uid: user.uid,
       displayName: _nameController.text.trim(),
-      photoUrl: existingProfile?.photoUrl,
+      photoUrl: existing?.photoUrl,
       bloodGroup: _selectedBloodGroup,
       medicalNotes:
           _medicalNotesController.text.trim().isNotEmpty
               ? _medicalNotesController.text.trim()
               : null,
-      createdAt: existingProfile?.createdAt ?? now,
+      createdAt: existing?.createdAt ?? now,
       updatedAt: now,
     );
 
@@ -118,8 +123,8 @@ class _ProfileSetupScreenState
   Widget build(BuildContext context) {
     final profileState =
         ref.watch(profileNotifierProvider);
+    final theme = Theme.of(context);
 
-    // Populate fields when profile is loaded
     if (profileState.status == ProfileStatus.loaded &&
         profileState.profile != null) {
       _populateFields(profileState.profile!);
@@ -137,9 +142,9 @@ class _ProfileSetupScreenState
         }
         if (next.status == ProfileStatus.loaded &&
             prev?.status == ProfileStatus.saving) {
-          context.showSuccessSnackBar(
-            'Profile saved successfully',
-          );
+          ref
+              .read(profileCompleteProvider.notifier)
+              .set(true);
           context.go(RouteNames.manageContacts);
         }
       },
@@ -153,43 +158,61 @@ class _ProfileSetupScreenState
         profileState.status == ProfileStatus.uploading;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(AppStrings.setupProfile),
-        centerTitle: true,
-      ),
+      backgroundColor: AppColors.surface,
       body: isLoading
           ? const Center(
               child: CircularProgressIndicator(),
             )
           : SafeArea(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(
-                  AppDimensions.paddingLG,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
                 ),
                 child: Form(
                   key: _formKey,
                   child: Column(
                     crossAxisAlignment:
-                        CrossAxisAlignment.center,
+                        CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(
-                        height: AppDimensions.paddingMD,
+                      const SizedBox(height: 24),
+                      _buildHeader(theme),
+                      const SizedBox(height: 32),
+
+                      // Avatar
+                      Center(
+                        child: AvatarPicker(
+                          imageUrl:
+                              profileState.photoUrl,
+                          localImagePath:
+                              _localImagePath,
+                          isUploading: isUploading,
+                          onImagePicked: _onImagePicked,
+                        ),
                       ),
-                      AvatarPicker(
-                        imageUrl: profileState.photoUrl,
-                        localImagePath: _localImagePath,
-                        isUploading: isUploading,
-                        onImagePicked: _onImagePicked,
+                      const SizedBox(height: 8),
+                      Center(
+                        child: Text(
+                          'Tap to add photo',
+                          style: theme
+                              .textTheme.bodySmall
+                              ?.copyWith(
+                            color:
+                                AppColors.textSecondary,
+                          ),
+                        ),
                       ),
-                      const SizedBox(
-                        height: AppDimensions.paddingXL,
+
+                      const SizedBox(height: 32),
+
+                      // Name field
+                      const _SectionLabel(
+                        label: 'Your Name',
+                        icon: Icons.person_outline,
                       ),
+                      const SizedBox(height: 8),
                       AppTextField(
                         controller: _nameController,
-                        label: AppStrings.fullName,
                         hint: 'Enter your full name',
-                        prefixIcon:
-                            const Icon(Icons.person),
                         textInputAction:
                             TextInputAction.next,
                         validator: (value) {
@@ -199,45 +222,270 @@ class _ProfileSetupScreenState
                                 'name';
                           }
                           if (value.trim().length < 2) {
-                            return 'Name must be at least'
-                                ' 2 characters';
+                            return 'Name must be at '
+                                'least 2 characters';
                           }
                           return null;
                         },
                       ),
-                      const SizedBox(
-                        height: AppDimensions.paddingMD,
+
+                      const SizedBox(height: 24),
+
+                      // Medical info
+                      const _SectionLabel(
+                        label: 'Medical Info',
+                        icon:
+                            Icons.medical_services_outlined,
+                        subtitle: 'Optional but helpful '
+                            'in emergencies',
                       ),
-                      MedicalInfoForm(
-                        selectedBloodGroup:
-                            _selectedBloodGroup,
-                        medicalNotesController:
+                      const SizedBox(height: 12),
+                      _buildBloodGroupSelector(theme),
+                      const SizedBox(height: 16),
+                      AppTextField(
+                        controller:
                             _medicalNotesController,
-                        onBloodGroupChanged: (value) {
-                          setState(() {
-                            _selectedBloodGroup = value;
-                          });
-                        },
+                        hint: 'Allergies, medications, '
+                            'conditions...',
+                        maxLines: 3,
+                        textInputAction:
+                            TextInputAction.done,
+                        maxLength: 500,
                       ),
-                      const SizedBox(
-                        height: AppDimensions.paddingXXL,
+
+                      const SizedBox(height: 32),
+
+                      // Save button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: FilledButton(
+                          onPressed: isSaving ||
+                                  isUploading
+                              ? null
+                              : _onSaveProfile,
+                          style: FilledButton.styleFrom(
+                            backgroundColor:
+                                AppColors.primary,
+                            foregroundColor:
+                                Colors.white,
+                            shape:
+                                RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(
+                                      16),
+                            ),
+                          ),
+                          child: isSaving
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child:
+                                      CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text(
+                                  'Continue',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight:
+                                        FontWeight.w700,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                        ),
                       ),
-                      AppButton(
-                        text: AppStrings.saveProfile,
-                        isLoading: isSaving,
-                        onPressed:
-                            isSaving || isUploading
-                                ? null
-                                : _onSaveProfile,
+
+                      const SizedBox(height: 16),
+                      Center(
+                        child: Text(
+                          'Step 2 of 3',
+                          style: theme
+                              .textTheme.bodySmall
+                              ?.copyWith(
+                            color:
+                                AppColors.textSecondary,
+                          ),
+                        ),
                       ),
-                      const SizedBox(
-                        height: AppDimensions.paddingMD,
-                      ),
+                      const SizedBox(height: 32),
                     ],
                   ),
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _buildHeader(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Progress bar (step 2 of 3)
+        Row(
+          children: [
+            Expanded(
+              child: Container(
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius:
+                      BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Container(
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.primary
+                      .withValues(alpha: 0.3),
+                  borderRadius:
+                      BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Container(
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.primary
+                      .withValues(alpha: 0.1),
+                  borderRadius:
+                      BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'Tell us about you',
+          style:
+              theme.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w800,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'This helps us personalize your safety '
+          'experience',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBloodGroupSelector(ThemeData theme) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: _bloodGroups.map((group) {
+        final isSelected =
+            _selectedBloodGroup == group;
+        return GestureDetector(
+          onTap: () {
+            setState(() {
+              _selectedBloodGroup =
+                  isSelected ? null : group;
+            });
+          },
+          child: AnimatedContainer(
+            duration:
+                const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 10,
+            ),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? AppColors.primary
+                  : AppColors.primary
+                      .withValues(alpha: 0.05),
+              borderRadius:
+                  BorderRadius.circular(12),
+              border: Border.all(
+                color: isSelected
+                    ? AppColors.primary
+                    : AppColors.primary
+                        .withValues(alpha: 0.15),
+              ),
+            ),
+            child: Text(
+              group,
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(
+                color: isSelected
+                    ? Colors.white
+                    : AppColors.textPrimary,
+                fontWeight: isSelected
+                    ? FontWeight.w600
+                    : FontWeight.w400,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final String? subtitle;
+
+  const _SectionLabel({
+    required this.label,
+    required this.icon,
+    this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: AppColors.primary,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: theme.textTheme.titleSmall
+                  ?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ],
+        ),
+        if (subtitle != null) ...[
+          const SizedBox(height: 2),
+          Padding(
+            padding: const EdgeInsets.only(left: 26),
+            child: Text(
+              subtitle!,
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
