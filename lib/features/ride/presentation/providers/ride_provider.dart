@@ -1,14 +1,15 @@
 import 'dart:async';
+import 'dart:io';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:saferide/core/constants/app_dimensions.dart';
 import 'package:saferide/core/providers/firebase_providers.dart';
 import 'package:saferide/core/providers/service_providers.dart';
 import 'package:saferide/core/providers/shared_providers.dart';
+import 'package:saferide/core/services/audio_service.dart';
 import 'package:saferide/core/services/battery_service.dart';
-import 'package:saferide/core/services/connectivity_service.dart';
 import 'package:saferide/core/services/location_service.dart';
+import 'package:saferide/core/services/shake_service.dart';
 import 'package:saferide/core/utils/logger.dart';
 import 'package:saferide/features/ride/data/datasources/ride_local_datasource.dart';
 import 'package:saferide/features/ride/data/datasources/ride_remote_datasource.dart';
@@ -131,6 +132,10 @@ class RideNotifier extends Notifier<RideState> {
     ref.onDispose(() {
       _stopLocationTracking();
       _deviationTimer?.cancel();
+      _shakeService.stopListening();
+      if (_audioService.isRecording) {
+        _audioService.stopAndGetBuffer();
+      }
     });
     return const RideState();
   }
@@ -149,6 +154,12 @@ class RideNotifier extends Notifier<RideState> {
 
   LocationService get _locationService =>
       ref.read(locationServiceProvider);
+
+  AudioService get _audioService =>
+      ref.read(audioServiceProvider);
+
+  ShakeService get _shakeService =>
+      ref.read(shakeServiceProvider);
 
   BatteryService get _batteryService =>
       ref.read(batteryServiceProvider);
@@ -206,6 +217,12 @@ class RideNotifier extends Notifier<RideState> {
           // Start GPS tracking
           _startLocationTracking(userId, ride.id);
 
+          // Start circular audio buffer for evidence
+          _startAudioBuffer();
+
+          // Start shake detection for panic trigger
+          _shakeService.startListening();
+
           // Start periodic deviation checks
           if (expectedRoute.isNotEmpty) {
             _startDeviationChecks(userId, ride.id);
@@ -239,6 +256,10 @@ class RideNotifier extends Notifier<RideState> {
 
     _stopLocationTracking();
     _deviationTimer?.cancel();
+    _shakeService.stopListening();
+    if (_audioService.isRecording) {
+      await _audioService.stopAndGetBuffer();
+    }
 
     final result = await _endRide(
       userId: userId,
@@ -308,7 +329,33 @@ class RideNotifier extends Notifier<RideState> {
   void reset() {
     _stopLocationTracking();
     _deviationTimer?.cancel();
+    _shakeService.stopListening();
+    if (_audioService.isRecording) {
+      _audioService.stopAndGetBuffer();
+    }
     state = const RideState();
+  }
+
+  Future<void> _startAudioBuffer() async {
+    try {
+      final hasPerms = await _audioService.hasPermission();
+      if (!hasPerms) {
+        AppLogger.warning(
+          'Microphone permission not granted, '
+          'audio buffer skipped',
+          tag: _tag,
+        );
+        return;
+      }
+      await _audioService.startCircularBuffer(
+        Directory.systemTemp.path,
+      );
+    } catch (e) {
+      AppLogger.error(
+        'Failed to start audio buffer: $e',
+        tag: _tag,
+      );
+    }
   }
 
   void _startLocationTracking(

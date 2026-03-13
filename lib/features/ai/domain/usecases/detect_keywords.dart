@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:dartz/dartz.dart';
 import 'package:saferide/core/errors/failures.dart';
 import 'package:saferide/core/utils/logger.dart';
-import 'package:saferide/features/ai/data/models/keyword_detection_result.dart';
+import 'package:saferide/features/ai/domain/entities/keyword_detection.dart';
 import 'package:saferide/features/ai/domain/repositories/ai_repository.dart';
 
 /// Distress keywords to detect — includes English and
@@ -68,7 +68,7 @@ class DetectKeywords {
   ///
   /// The audio is processed in a background isolate to
   /// avoid blocking the UI thread.
-  Future<Either<Failure, KeywordDetectionResult>> call(
+  Future<Either<Failure, KeywordDetection>> call(
     Uint8List audioChunk,
   ) async {
     try {

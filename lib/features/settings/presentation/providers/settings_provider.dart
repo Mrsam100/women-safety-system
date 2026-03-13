@@ -4,6 +4,10 @@ import 'package:saferide/core/utils/logger.dart';
 import 'package:saferide/features/settings/data/repositories/settings_repository_impl.dart';
 import 'package:saferide/features/settings/domain/entities/app_settings.dart';
 import 'package:saferide/features/settings/domain/repositories/settings_repository.dart';
+import 'package:saferide/features/settings/domain/usecases/delete_all_data.dart';
+import 'package:saferide/features/settings/domain/usecases/export_data.dart';
+import 'package:saferide/features/settings/domain/usecases/get_settings.dart';
+import 'package:saferide/features/settings/domain/usecases/update_settings.dart';
 
 // Repository provider
 final settingsRepositoryProvider =
@@ -11,6 +15,29 @@ final settingsRepositoryProvider =
   return SettingsRepositoryImpl(
     ref.watch(localStorageServiceProvider),
   );
+});
+
+// Use case providers
+final getSettingsProvider = Provider<GetSettings>((ref) {
+  return GetSettings(ref.watch(settingsRepositoryProvider));
+});
+
+final updateSettingsProvider =
+    Provider<UpdateSettings>((ref) {
+  return UpdateSettings(
+    ref.watch(settingsRepositoryProvider),
+  );
+});
+
+final deleteAllDataProvider =
+    Provider<DeleteAllData>((ref) {
+  return DeleteAllData(
+    ref.watch(settingsRepositoryProvider),
+  );
+});
+
+final exportDataProvider = Provider<ExportData>((ref) {
+  return ExportData(ref.watch(settingsRepositoryProvider));
 });
 
 // Settings state
@@ -45,12 +72,18 @@ class SettingsNotifier extends Notifier<SettingsState> {
     return const SettingsState();
   }
 
-  SettingsRepository get _repository =>
-      ref.read(settingsRepositoryProvider);
+  GetSettings get _getSettings =>
+      ref.read(getSettingsProvider);
+  UpdateSettings get _updateSettings =>
+      ref.read(updateSettingsProvider);
+  DeleteAllData get _deleteAllData =>
+      ref.read(deleteAllDataProvider);
+  ExportData get _exportData =>
+      ref.read(exportDataProvider);
 
   Future<void> _loadSettings() async {
     state = state.copyWith(isLoading: true);
-    final result = await _repository.getSettings();
+    final result = await _getSettings();
     result.fold(
       (failure) {
         AppLogger.error(
@@ -73,7 +106,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
 
   Future<void> updateSettings(AppSettings settings) async {
     state = state.copyWith(settings: settings);
-    final result = await _repository.updateSettings(settings);
+    final result = await _updateSettings(settings);
     result.fold(
       (failure) {
         state = state.copyWith(
@@ -145,7 +178,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
 
   Future<bool> deleteAllData() async {
     state = state.copyWith(isLoading: true);
-    final result = await _repository.deleteAllData();
+    final result = await _deleteAllData();
     return result.fold(
       (failure) {
         state = state.copyWith(
@@ -163,7 +196,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
 
   Future<String?> exportData() async {
     state = state.copyWith(isLoading: true);
-    final result = await _repository.exportData();
+    final result = await _exportData();
     state = state.copyWith(isLoading: false);
     return result.fold(
       (failure) {

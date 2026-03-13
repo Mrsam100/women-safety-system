@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:saferide/features/ai/domain/entities/keyword_detection.dart';
 
 /// Model representing the result of a keyword detection
 /// pass on an audio chunk.
@@ -82,6 +83,15 @@ class KeywordDetectionResult {
       keyword.hashCode ^
       confidence.hashCode ^
       timestamp.hashCode;
+
+  /// Convert to domain entity.
+  KeywordDetection toEntity() {
+    return KeywordDetection(
+      keyword: keyword,
+      confidence: confidence,
+      timestamp: timestamp,
+    );
+  }
 
   @override
   String toString() =>

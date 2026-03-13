@@ -46,8 +46,9 @@ class AlertModel {
               json['notifiedContacts'] as List,
             )
           : const [],
-      timestamp:
-          (json['timestamp'] as Timestamp).toDate(),
+      timestamp: json['timestamp'] is Timestamp
+          ? (json['timestamp'] as Timestamp).toDate()
+          : DateTime.now(),
     );
   }
 

@@ -8,14 +8,28 @@ class EvidenceLocalDatasource {
   static const _trailBoxName = 'location_trails';
   static const _evidenceBoxName = 'audio_evidence_cache';
 
+  /// Lazily open and reuse the trail box.
+  Future<Box<Map>> get _trailBox async {
+    if (Hive.isBoxOpen(_trailBoxName)) {
+      return Hive.box<Map>(_trailBoxName);
+    }
+    return Hive.openBox<Map>(_trailBoxName);
+  }
+
+  /// Lazily open and reuse the evidence box.
+  Future<Box<Map>> get _evidenceBox async {
+    if (Hive.isBoxOpen(_evidenceBoxName)) {
+      return Hive.box<Map>(_evidenceBoxName);
+    }
+    return Hive.openBox<Map>(_evidenceBoxName);
+  }
+
   /// Caches location trail points for a ride.
   Future<void> cacheLocationTrail(
     LocationTrailModel trail,
   ) async {
     try {
-      final box = await Hive.openBox<Map>(
-        _trailBoxName,
-      );
+      final box = await _trailBox;
       await box.put(trail.rideId, trail.toJson());
     } catch (e) {
       throw CacheException(
@@ -31,9 +45,7 @@ class EvidenceLocalDatasource {
     String rideId,
   ) async {
     try {
-      final box = await Hive.openBox<Map>(
-        _trailBoxName,
-      );
+      final box = await _trailBox;
       final data = box.get(rideId);
       if (data == null) return null;
       return LocationTrailModel.fromJson(
@@ -54,9 +66,7 @@ class EvidenceLocalDatasource {
     required TrailPointModel point,
   }) async {
     try {
-      final box = await Hive.openBox<Map>(
-        _trailBoxName,
-      );
+      final box = await _trailBox;
       final existing = box.get(rideId);
 
       if (existing != null) {
@@ -89,9 +99,7 @@ class EvidenceLocalDatasource {
     Map<String, dynamic> evidenceJson,
   ) async {
     try {
-      final box = await Hive.openBox<Map>(
-        _evidenceBoxName,
-      );
+      final box = await _evidenceBox;
       final id = evidenceJson['id'] as String;
       await box.put(id, evidenceJson);
     } catch (e) {
@@ -106,9 +114,7 @@ class EvidenceLocalDatasource {
   Future<List<Map<String, dynamic>>>
       getCachedAudioEvidence(String rideId) async {
     try {
-      final box = await Hive.openBox<Map>(
-        _evidenceBoxName,
-      );
+      final box = await _evidenceBox;
       final results = <Map<String, dynamic>>[];
       for (final key in box.keys) {
         final data = box.get(key);
@@ -131,9 +137,7 @@ class EvidenceLocalDatasource {
   /// Removes cached location trail for a ride.
   Future<void> clearCachedTrail(String rideId) async {
     try {
-      final box = await Hive.openBox<Map>(
-        _trailBoxName,
-      );
+      final box = await _trailBox;
       await box.delete(rideId);
     } catch (e) {
       throw CacheException(
@@ -148,9 +152,7 @@ class EvidenceLocalDatasource {
     String evidenceId,
   ) async {
     try {
-      final box = await Hive.openBox<Map>(
-        _evidenceBoxName,
-      );
+      final box = await _evidenceBox;
       await box.delete(evidenceId);
     } catch (e) {
       throw CacheException(

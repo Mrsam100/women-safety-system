@@ -13,6 +13,12 @@ class AuthRemoteDatasource {
   final FirebaseFirestore _firestore;
   GoogleSignIn? _googleSignIn;
 
+  /// OTP rate limiting: max 3 requests per 15 minutes.
+  static const _maxOtpRequests = 3;
+  static const _otpWindowDuration =
+      Duration(minutes: 15);
+  final List<DateTime> _otpRequestTimestamps = [];
+
   AuthRemoteDatasource({
     required FirebaseAuth auth,
     required FirebaseFirestore firestore,
@@ -27,6 +33,20 @@ class AuthRemoteDatasource {
       _googleSignIn ??= GoogleSignIn();
 
   Future<String> sendOtp(String phoneNumber) async {
+    // Client-side rate limiting
+    final now = DateTime.now();
+    _otpRequestTimestamps.removeWhere(
+      (ts) => now.difference(ts) > _otpWindowDuration,
+    );
+    if (_otpRequestTimestamps.length >= _maxOtpRequests) {
+      throw const AuthException(
+        message: 'Too many OTP requests. '
+            'Please wait 15 minutes before trying again.',
+        code: 'otp-rate-limited',
+      );
+    }
+    _otpRequestTimestamps.add(now);
+
     final completer = Completer<String>();
 
     await _auth.verifyPhoneNumber(
@@ -82,43 +102,19 @@ class AuthRemoteDatasource {
     }
   }
 
-  /// Start Google sign-in redirect (web only).
-  /// After redirect back, [checkGoogleRedirectResult]
-  /// picks up the result.
-  Future<void> startGoogleSignInRedirect() async {
-    final googleProvider = GoogleAuthProvider();
-    googleProvider.addScope('email');
-    googleProvider.addScope('profile');
-    await _auth.signInWithRedirect(googleProvider);
-  }
-
-  /// Check if the user is returning from a Google
-  /// sign-in redirect. Returns null if not.
-  Future<UserModel?> checkGoogleRedirectResult() async {
-    try {
-      final result = await _auth.getRedirectResult();
-      if (result.user != null) {
-        return _getOrCreateUser(result);
-      }
-      return null;
-    } catch (_) {
-      return null;
-    }
-  }
-
   Future<UserModel> signInWithGoogle() async {
     try {
       final UserCredential userCredential;
 
       if (kIsWeb) {
-        // On web, use redirect flow to avoid COOP issues
-        await startGoogleSignInRedirect();
-        // Page will redirect away — this won't execute.
-        // The result is handled by checkGoogleRedirectResult
-        // when the app reloads after redirect.
-        throw const AuthException(
-          message: 'Redirecting to Google sign-in...',
-          code: 'sign-in-cancelled',
+        // On web, use popup flow.
+        // Requires Chrome launched with
+        // --disable-web-security to bypass COOP in dev.
+        final googleProvider = GoogleAuthProvider();
+        googleProvider.addScope('email');
+        googleProvider.addScope('profile');
+        userCredential = await _auth.signInWithPopup(
+          googleProvider,
         );
       } else {
         // On mobile, use google_sign_in package

@@ -47,6 +47,23 @@
 			</array>
 		</dict>
 	</dict>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>SafeRide needs your location to track your ride and send it to emergency contacts if you trigger an alert.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>SafeRide needs continuous location access to keep tracking your ride in the background for your safety.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>SafeRide uses the microphone to keep a rolling audio buffer during rides. Audio stays on-device unless you trigger an emergency.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>SafeRide uses motion sensors to detect shake gestures that trigger emergency alerts.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>SafeRide accesses your contacts to let you quickly add emergency contacts.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+		<string>location</string>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

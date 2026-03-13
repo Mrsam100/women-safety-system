@@ -9,6 +9,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:saferide/core/constants/api_constants.dart';
 import 'package:saferide/core/constants/app_dimensions.dart';
 import 'package:saferide/core/errors/exceptions.dart';
+import 'package:saferide/core/services/local_storage_service.dart';
 import 'package:saferide/features/evidence/data/models/audio_evidence_model.dart';
 import 'package:saferide/features/evidence/data/models/location_trail_model.dart';
 import 'package:uuid/uuid.dart';
@@ -20,14 +21,17 @@ class EvidenceRemoteDatasource {
   final FirebaseFirestore _firestore;
   final FirebaseStorage _storage;
   final FirebaseAuth _auth;
+  final LocalStorageService _localStorage;
 
   EvidenceRemoteDatasource({
     required FirebaseFirestore firestore,
     required FirebaseStorage storage,
     required FirebaseAuth auth,
+    required LocalStorageService localStorage,
   })  : _firestore = firestore,
         _storage = storage,
-        _auth = auth;
+        _auth = auth,
+        _localStorage = localStorage;
 
   String get _userId {
     final user = _auth.currentUser;
@@ -107,19 +111,22 @@ class EvidenceRemoteDatasource {
 
       final storageUrl = await ref.getDownloadURL();
 
-      // Store the encryption key as base64 for the
-      // Firestore record (in production, this should go
-      // to flutter_secure_storage instead)
+      // Store encryption key in secure storage (on-device
+      // only — never sent to Firestore)
       final keyBase64 = key.base64;
+      await _localStorage.saveSecure(
+        'enc_key_$evidenceId',
+        keyBase64,
+      );
 
-      // Create Firestore metadata record
+      // Create Firestore metadata record (no encryption key)
       final model = AudioEvidenceModel(
         id: evidenceId,
         rideId: rideId,
         alertId: alertId,
         storageUrl: storageUrl,
         durationSeconds: durationSeconds,
-        encryptionKey: keyBase64,
+        encryptionKey: '', // key is in secure storage
         createdAt: now,
         expiresAt: expiresAt,
       );
@@ -276,6 +283,11 @@ class EvidenceRemoteDatasource {
           )
           .doc(evidenceId)
           .delete();
+
+      // Remove encryption key from secure storage
+      await _localStorage.deleteSecure(
+        'enc_key_$evidenceId',
+      );
     } on FirebaseException catch (e) {
       throw ServerException(
         message:
@@ -393,10 +405,17 @@ class EvidenceRemoteDatasource {
         );
       }
 
-      // Decrypt
-      final key = encrypt_pkg.Key.fromBase64(
-        model.encryptionKey,
+      // Retrieve encryption key from secure storage
+      final keyBase64 = await _localStorage.getSecure(
+        'enc_key_$evidenceId',
       );
+      if (keyBase64 == null || keyBase64.isEmpty) {
+        throw const ServerException(
+          message: 'Encryption key not found in '
+              'secure storage',
+        );
+      }
+      final key = encrypt_pkg.Key.fromBase64(keyBase64);
       final iv = encrypt_pkg.IV.fromBase64(ivBase64);
       final encrypter = encrypt_pkg.Encrypter(
         encrypt_pkg.AES(

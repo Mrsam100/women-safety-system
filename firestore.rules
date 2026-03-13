@@ -47,18 +47,29 @@ service cloud.firestore {
 
     // Live tracking - top level for fast reads
     match /liveTracking/{rideId} {
-      // Owner can read/write
+      // Only the ride owner can write
       allow write: if isAuth()
         && request.resource.data.userId == request.auth.uid;
-      // Anyone with a valid tracking token can read
+      // Owner can always read; others need a valid tracking token
       allow read: if isAuth()
-        || resource.data.userId == request.auth.uid;
+        && resource.data.userId == request.auth.uid;
+    }
+
+    // Live tracking read via tracking token (unauthenticated web dashboard)
+    // Token holder can only read the specific ride linked to the token
+    match /liveTracking/{rideId} {
+      allow read: if exists(/databases/$(database)/documents/trackingTokens/$(rideId))
+        && get(/databases/$(database)/documents/trackingTokens/$(rideId)).data.rideId == rideId
+        && get(/databases/$(database)/documents/trackingTokens/$(rideId)).data.expiresAt > request.time;
     }
 
     // Tracking tokens - for web dashboard access
     match /trackingTokens/{token} {
-      allow read: if true; // Public read for web dashboard
-      allow write: if isAuth();
+      // Only authenticated users can create/manage tokens
+      allow read: if isAuth()
+        && resource.data.userId == request.auth.uid;
+      allow write: if isAuth()
+        && request.resource.data.userId == request.auth.uid;
     }
 
     // Area data - aggregated safety scores

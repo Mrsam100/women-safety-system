@@ -33,11 +33,14 @@ class AudioEvidenceModel {
       alertId: json['alertId'] as String?,
       storageUrl: json['storageUrl'] as String?,
       durationSeconds: json['durationSeconds'] as int,
-      encryptionKey: json['encryptionKey'] as String,
-      createdAt:
-          (json['createdAt'] as Timestamp).toDate(),
-      expiresAt:
-          (json['expiresAt'] as Timestamp).toDate(),
+      encryptionKey:
+          json['encryptionKey'] as String? ?? '',
+      createdAt: json['createdAt'] is Timestamp
+          ? (json['createdAt'] as Timestamp).toDate()
+          : DateTime.now(),
+      expiresAt: json['expiresAt'] is Timestamp
+          ? (json['expiresAt'] as Timestamp).toDate()
+          : DateTime.now(),
       isSaved: json['isSaved'] as bool? ?? false,
     );
   }
@@ -49,7 +52,8 @@ class AudioEvidenceModel {
       'alertId': alertId,
       'storageUrl': storageUrl,
       'durationSeconds': durationSeconds,
-      'encryptionKey': encryptionKey,
+      // encryptionKey is stored in flutter_secure_storage,
+      // never written to Firestore
       'createdAt': Timestamp.fromDate(createdAt),
       'expiresAt': Timestamp.fromDate(expiresAt),
       'isSaved': isSaved,

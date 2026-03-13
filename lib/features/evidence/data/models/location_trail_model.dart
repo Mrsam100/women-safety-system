@@ -21,8 +21,9 @@ class TrailPointModel {
       latitude: (json['latitude'] as num).toDouble(),
       longitude: (json['longitude'] as num).toDouble(),
       speed: (json['speed'] as num?)?.toDouble(),
-      timestamp:
-          (json['timestamp'] as Timestamp).toDate(),
+      timestamp: json['timestamp'] is Timestamp
+          ? (json['timestamp'] as Timestamp).toDate()
+          : DateTime.now(),
     );
   }
 

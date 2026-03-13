@@ -36,8 +36,9 @@ class RoutePointModel {
           (json['accuracy'] as num?)?.toDouble() ?? 0,
       batteryLevel:
           (json['batteryLevel'] as int?) ?? 100,
-      timestamp:
-          (json['timestamp'] as Timestamp).toDate(),
+      timestamp: json['timestamp'] is Timestamp
+          ? (json['timestamp'] as Timestamp).toDate()
+          : DateTime.now(),
     );
   }
 

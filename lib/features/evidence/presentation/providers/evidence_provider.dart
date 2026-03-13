@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:saferide/core/providers/firebase_providers.dart';
+import 'package:saferide/core/providers/service_providers.dart';
 import 'package:saferide/features/evidence/data/datasources/evidence_local_datasource.dart';
 import 'package:saferide/features/evidence/data/datasources/evidence_remote_datasource.dart';
 import 'package:saferide/features/evidence/data/repositories/evidence_repository_impl.dart';
@@ -21,6 +22,7 @@ final evidenceRemoteDatasourceProvider =
     firestore: ref.watch(firestoreProvider),
     storage: ref.watch(firebaseStorageProvider),
     auth: ref.watch(firebaseAuthProvider),
+    localStorage: ref.watch(localStorageServiceProvider),
   );
 });
 

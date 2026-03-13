@@ -1,4 +1,39 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Location permissions -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <!-- Audio recording -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- SMS for offline emergency alerts -->
+    <uses-permission android:name="android.permission.SEND_SMS" />
+
+    <!-- Contacts for emergency contact picker -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+
+    <!-- Sensors for shake detection -->
+    <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
+
+    <!-- Foreground service for ride tracking -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
+    <!-- Vibration for panic feedback -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Push notifications (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Internet for Firebase -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Keep CPU awake during emergency -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
     <application
         android:label="saferide"
         android:name="${applicationName}"

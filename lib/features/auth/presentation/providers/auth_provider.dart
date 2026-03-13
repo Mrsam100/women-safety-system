@@ -1,6 +1,4 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:saferide/features/auth/data/models/user_model.dart';
 import 'package:saferide/core/providers/firebase_providers.dart';
 import 'package:saferide/features/auth/data/datasources/auth_remote_datasource.dart';
 import 'package:saferide/features/auth/data/repositories/auth_repository_impl.dart';
@@ -98,10 +96,6 @@ class AuthState {
 class AuthNotifier extends Notifier<AuthState> {
   @override
   AuthState build() {
-    // On web, check for Google redirect result on init
-    if (kIsWeb) {
-      _checkGoogleRedirectResult();
-    }
     return const AuthState();
   }
 
@@ -112,24 +106,6 @@ class AuthNotifier extends Notifier<AuthState> {
       ref.read(signInWithGoogleProvider);
   sign_out_usecase.SignOut get _signOut =>
       ref.read(signOutProvider);
-
-  Future<void> _checkGoogleRedirectResult() async {
-    try {
-      final datasource =
-          ref.read(authRemoteDatasourceProvider);
-      final userModel =
-          await datasource.checkGoogleRedirectResult();
-      if (userModel != null) {
-        final entity = userModel.toEntity();
-        state = state.copyWith(
-          status: AuthStatus.authenticated,
-          user: entity,
-        );
-      }
-    } catch (_) {
-      // No redirect result — normal app load
-    }
-  }
 
   Future<void> sendOtp(String phoneNumber) async {
     state = state.copyWith(
@@ -189,25 +165,6 @@ class AuthNotifier extends Notifier<AuthState> {
       status: AuthStatus.signingInWithGoogle,
     );
 
-    if (kIsWeb) {
-      // On web, redirect to Google sign-in page.
-      // After sign-in, page reloads and
-      // _checkGoogleRedirectResult picks up the result.
-      try {
-        final datasource =
-            ref.read(authRemoteDatasourceProvider);
-        await datasource.startGoogleSignInRedirect();
-      } catch (e) {
-        state = state.copyWith(
-          status: AuthStatus.error,
-          errorMessage:
-              _mapErrorMessage('google-sign-in-failed'),
-        );
-      }
-      return;
-    }
-
-    // Mobile flow
     final result = await _signInWithGoogle();
     result.fold(
       (failure) {

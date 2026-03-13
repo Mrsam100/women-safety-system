@@ -87,6 +87,10 @@ class _PanicButtonState extends ConsumerState<PanicButton>
     _holdController.forward(from: 0.0);
     _pulseController.stop();
 
+    // Notify provider that countdown started
+    ref.read(panicNotifierProvider.notifier)
+        .startCountdown();
+
     HapticFeedback.heavyImpact();
 
     _countdownTimer?.cancel();
@@ -110,6 +114,10 @@ class _PanicButtonState extends ConsumerState<PanicButton>
     _countdownTimer?.cancel();
     _countdownSeconds =
         AppDimensions.panicLongPressDuration;
+
+    // Cancel the provider countdown so no panic fires
+    ref.read(panicNotifierProvider.notifier)
+        .cancelCountdown();
 
     if (mounted) {
       _pulseController.repeat(reverse: true);

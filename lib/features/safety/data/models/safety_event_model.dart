@@ -25,8 +25,9 @@ class SafetyEventModel {
       id: json['id'] as String,
       type: json['type'] as String,
       description: json['description'] as String,
-      timestamp:
-          (json['timestamp'] as Timestamp).toDate(),
+      timestamp: json['timestamp'] is Timestamp
+          ? (json['timestamp'] as Timestamp).toDate()
+          : DateTime.now(),
       latitude: (json['latitude'] as num).toDouble(),
       longitude: (json['longitude'] as num).toDouble(),
     );

@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:dartz/dartz.dart';
 import 'package:encrypt/encrypt.dart' as enc;
@@ -69,14 +67,12 @@ class TriggerPanic {
   /// [contactFcmTokens] - FCM tokens of contacts who have
   ///   the app installed (for push notifications).
   /// [userName] - display name for SMS / push messages.
-  /// [encryptionKey] - 32-byte AES-256 key (base64).
   Future<Either<Failure, Alert>> call({
     required String userId,
     required String rideId,
     required List<String> contactPhones,
     List<String> contactFcmTokens = const [],
     required String userName,
-    required String encryptionKey,
   }) async {
     try {
       AppLogger.critical(
@@ -99,7 +95,6 @@ class TriggerPanic {
           userId: userId,
           rideId: rideId,
           alertId: alertId,
-          encryptionKey: encryptionKey,
         ),
       ]);
 
@@ -257,7 +252,6 @@ class TriggerPanic {
     required String userId,
     required String rideId,
     required String alertId,
-    required String encryptionKey,
   }) async {
     try {
       final audioPaths =
@@ -281,8 +275,14 @@ class TriggerPanic {
 
       if (allBytes.isEmpty) return null;
 
-      // AES-256 encryption
-      final key = enc.Key.fromBase64(encryptionKey);
+      // Generate AES-256 key on-device
+      final key = enc.Key.fromSecureRandom(32);
+
+      // Store key securely on-device
+      await _localStorageService.saveSecure(
+        'enc_key_$alertId',
+        key.base64,
+      );
       final iv = enc.IV.fromSecureRandom(16);
       final encrypter = enc.Encrypter(
         enc.AES(key, mode: enc.AESMode.cbc),

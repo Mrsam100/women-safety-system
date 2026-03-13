@@ -173,10 +173,12 @@ class AlertsNotifier extends Notifier<AlertsState> {
   /// this to [TriggerPanic].
   void Function()? onEscalate;
 
-  /// Previous GPS reading for speed calculations.
+  /// GPS readings for speed calculations.
   double? _prevLat;
   double? _prevLon;
   DateTime? _prevTimestamp;
+  double? _currentLat;
+  double? _currentLon;
 
   /// Ride context set by [startMonitoring].
   String? _userId;
@@ -284,9 +286,12 @@ class AlertsNotifier extends Notifier<AlertsState> {
     required double latitude,
     required double longitude,
   }) {
-    _prevLat = latitude;
-    _prevLon = longitude;
+    // Shift current → previous before updating
+    _prevLat = _currentLat;
+    _prevLon = _currentLon;
     _prevTimestamp = DateTime.now();
+    _currentLat = latitude;
+    _currentLon = longitude;
   }
 
   /// User responded "Yes, I'm safe" to the safety
@@ -342,7 +347,7 @@ class AlertsNotifier extends Notifier<AlertsState> {
   /// Run all enabled checks in parallel.
   Future<void> _runChecks() async {
     if (!state.isMonitoring) return;
-    if (_prevLat == null || _prevLon == null) return;
+    if (_currentLat == null || _currentLon == null) return;
 
     final config = state.config;
     final now = DateTime.now();
@@ -360,11 +365,11 @@ class AlertsNotifier extends Notifier<AlertsState> {
   Future<void> _runRouteDeviationCheck(
     DateTime now,
   ) async {
-    if (_prevLat == null || _prevLon == null) return;
+    if (_currentLat == null || _currentLon == null) return;
 
     final result = await _checkRouteDeviation(
-      currentLat: _prevLat!,
-      currentLon: _prevLon!,
+      currentLat: _currentLat!,
+      currentLon: _currentLon!,
       expectedRoute: _expectedRoute,
       thresholdKm: state.config.deviationThresholdKm,
     );
@@ -400,20 +405,20 @@ class AlertsNotifier extends Notifier<AlertsState> {
   ) async {
     if (_prevLat == null ||
         _prevLon == null ||
+        _currentLat == null ||
+        _currentLon == null ||
         _prevTimestamp == null) {
       return;
     }
 
-    // We need two readings to calculate speed.
-    // Use the stored previous position and current
-    // position. On first call, skip.
+    // We need two distinct readings to calculate speed.
     final timeDiff =
         now.difference(_prevTimestamp!).inSeconds;
     if (timeDiff <= 0) return;
 
     final result = await _checkSpeedAnomaly(
-      currentLat: _prevLat!,
-      currentLon: _prevLon!,
+      currentLat: _currentLat!,
+      currentLon: _currentLon!,
       previousLat: _prevLat!,
       previousLon: _prevLon!,
       timeDiffSeconds: timeDiff,

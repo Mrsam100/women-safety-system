@@ -125,9 +125,19 @@ class PanicNotifier extends Notifier<PanicState> {
     );
   }
 
+  /// Cancel the countdown and return to idle.
+  /// Safe to call at any time — only cancels if
+  /// currently counting down.
+  void cancelCountdown() {
+    if (state.status != PanicStatus.countingDown) return;
+    state = const PanicState();
+  }
+
   /// Update countdown tick.
   void updateCountdown(int remaining) {
     if (remaining <= 0) return;
+    // If user already cancelled, don't update
+    if (state.status != PanicStatus.countingDown) return;
     state = state.copyWith(countdownSeconds: remaining);
   }
 
@@ -138,7 +148,6 @@ class PanicNotifier extends Notifier<PanicState> {
     required List<String> contactPhones,
     List<String> contactFcmTokens = const [],
     required String userName,
-    required String encryptionKey,
   }) async {
     state = state.copyWith(
       status: PanicStatus.triggering,
@@ -150,7 +159,6 @@ class PanicNotifier extends Notifier<PanicState> {
       contactPhones: contactPhones,
       contactFcmTokens: contactFcmTokens,
       userName: userName,
-      encryptionKey: encryptionKey,
     );
 
     result.fold(

@@ -266,7 +266,6 @@ class RideScreen extends ConsumerWidget {
                               userName:
                                   user.displayName ??
                                       'User',
-                              encryptionKey: user.uid,
                             );
 
                         context.push(RouteNames.panic);

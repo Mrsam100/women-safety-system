@@ -6,6 +6,7 @@ import 'package:saferide/core/utils/logger.dart';
 import 'package:saferide/features/ai/data/datasources/tflite_datasource.dart';
 import 'package:saferide/features/ai/data/models/keyword_detection_result.dart';
 import 'package:saferide/features/ai/data/models/threat_score_model.dart';
+import 'package:saferide/features/ai/domain/entities/keyword_detection.dart';
 import 'package:saferide/features/ai/domain/entities/threat_assessment.dart';
 import 'package:saferide/features/ai/domain/repositories/ai_repository.dart';
 
@@ -29,7 +30,7 @@ class AiRepositoryImpl implements AiRepository {
   }) : _tfliteDatasource = tfliteDatasource;
 
   @override
-  Future<Either<Failure, KeywordDetectionResult>>
+  Future<Either<Failure, KeywordDetection>>
       detectKeywords(Uint8List audioChunk) async {
     try {
       final result =
@@ -46,7 +47,7 @@ class AiRepositoryImpl implements AiRepository {
         );
       }
 
-      return Right(result);
+      return Right(result.toEntity());
     } catch (e, st) {
       AppLogger.error(
         'Keyword detection failed in repository',
@@ -63,7 +64,7 @@ class AiRepositoryImpl implements AiRepository {
   }
 
   @override
-  Future<Either<Failure, ThreatScoreModel>>
+  Future<Either<Failure, ThreatAssessment>>
       calculateThreatScore(
     List<ThreatSignal> signals,
   ) async {
@@ -101,7 +102,7 @@ class AiRepositoryImpl implements AiRepository {
         tag: _tag,
       );
 
-      return Right(model);
+      return Right(model.toEntity());
     } catch (e, st) {
       AppLogger.error(
         'Threat score calculation failed '

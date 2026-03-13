@@ -2,8 +2,7 @@ import 'dart:typed_data';
 
 import 'package:dartz/dartz.dart';
 import 'package:saferide/core/errors/failures.dart';
-import 'package:saferide/features/ai/data/models/keyword_detection_result.dart';
-import 'package:saferide/features/ai/data/models/threat_score_model.dart';
+import 'package:saferide/features/ai/domain/entities/keyword_detection.dart';
 import 'package:saferide/features/ai/domain/entities/threat_assessment.dart';
 
 /// Contract for AI-related data operations including
@@ -14,12 +13,12 @@ abstract class AiRepository {
   ///
   /// Returns the detection result if a keyword was
   /// found, or a result with empty keyword otherwise.
-  Future<Either<Failure, KeywordDetectionResult>>
+  Future<Either<Failure, KeywordDetection>>
       detectKeywords(Uint8List audioChunk);
 
   /// Calculate an aggregate threat score from the
   /// provided list of [signals].
-  Future<Either<Failure, ThreatScoreModel>>
+  Future<Either<Failure, ThreatAssessment>>
       calculateThreatScore(
     List<ThreatSignal> signals,
   );
