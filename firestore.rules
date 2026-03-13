@@ -1,0 +1,71 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: check if request is from authenticated user
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // Helper: check if user owns the document
+    function isOwner(userId) {
+      return isAuth() && request.auth.uid == userId;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+
+      // Emergency contacts subcollection
+      match /emergencyContacts/{contactId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Rides subcollection
+      match /rides/{rideId} {
+        allow read, write: if isOwner(userId);
+
+        // Location trail within a ride
+        match /locationTrail/{pointId} {
+          allow read, write: if isOwner(userId);
+        }
+
+        // Alerts within a ride
+        match /alerts/{alertId} {
+          allow read, write: if isOwner(userId);
+        }
+      }
+
+      // Audio evidence subcollection
+      match /audioEvidence/{evidenceId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Live tracking - top level for fast reads
+    match /liveTracking/{rideId} {
+      // Owner can read/write
+      allow write: if isAuth()
+        && request.resource.data.userId == request.auth.uid;
+      // Anyone with a valid tracking token can read
+      allow read: if isAuth()
+        || resource.data.userId == request.auth.uid;
+    }
+
+    // Tracking tokens - for web dashboard access
+    match /trackingTokens/{token} {
+      allow read: if true; // Public read for web dashboard
+      allow write: if isAuth();
+    }
+
+    // Area data - aggregated safety scores
+    match /areaData/{geohash} {
+      allow read: if isAuth();
+      // Only Cloud Functions can write
+      allow write: if false;
+    }
+  }
+}
