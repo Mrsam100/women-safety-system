@@ -1,13 +1,17 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:saferide/core/constants/app_colors.dart';
 import 'package:saferide/core/constants/app_dimensions.dart';
 import 'package:saferide/core/constants/app_strings.dart';
+import 'package:saferide/core/constants/route_names.dart';
 import 'package:saferide/core/providers/shared_providers.dart';
+import 'package:saferide/features/emergency_contacts/presentation/providers/contacts_provider.dart';
 import 'package:saferide/features/ride/presentation/providers/ride_provider.dart';
 import 'package:saferide/features/ride/presentation/widgets/ride_controls.dart';
 import 'package:saferide/features/ride/presentation/widgets/ride_map.dart';
+import 'package:saferide/features/safety/presentation/providers/panic_provider.dart';
 import 'package:saferide/features/safety/presentation/widgets/panic_button.dart';
 import 'package:saferide/features/safety/presentation/widgets/safety_status_indicator.dart';
 
@@ -232,9 +236,40 @@ class RideScreen extends ConsumerWidget {
                         final ride =
                             rideState.currentRide;
                         if (ride == null) return;
-                        // Panic triggering is handled
-                        // by the panic provider in the
-                        // panic screen / flow.
+
+                        final user = FirebaseAuth
+                            .instance.currentUser;
+                        if (user == null) return;
+
+                        final contactsState =
+                            ref.read(contactsProvider);
+                        final phones = contactsState
+                            .contacts
+                            .map((c) => c.phoneNumber)
+                            .toList();
+                        final tokens = contactsState
+                            .contacts
+                            .where(
+                              (c) => c.fcmToken != null,
+                            )
+                            .map((c) => c.fcmToken!)
+                            .toList();
+
+                        ref
+                            .read(panicNotifierProvider
+                                .notifier)
+                            .triggerPanic(
+                              userId: user.uid,
+                              rideId: ride.id,
+                              contactPhones: phones,
+                              contactFcmTokens: tokens,
+                              userName:
+                                  user.displayName ??
+                                      'User',
+                              encryptionKey: user.uid,
+                            );
+
+                        context.push(RouteNames.panic);
                       },
                     ),
                   ],

@@ -2,7 +2,19 @@
   "permissions": {
     "allow": [
       "WebSearch",
-      "Bash(flutter --version)"
+      "Bash(flutter --version)",
+      "Bash(gh repo:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Read(//c/Users/Lenovo/flutter/bin/**)",
+      "Read(//c/flutter/bin/**)",
+      "Read(//c/Users/Lenovo/**)",
+      "Bash(/c/Users/Lenovo/flutter/bin/flutter --version)",
+      "Bash(/c/Users/Lenovo/flutter/bin/flutter pub:*)",
+      "Bash(/c/Users/Lenovo/flutter/bin/flutter analyze:*)",
+      "Bash(/c/Users/Lenovo/flutter/bin/flutter build:*)",
+      "Bash(/c/Users/Lenovo/flutter/bin/flutter devices:*)"
     ]
   }
 }

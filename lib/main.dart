@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:saferide/app.dart';
 import 'package:saferide/core/services/local_storage_service.dart';
+import 'package:saferide/core/services/notification_service.dart';
 import 'package:saferide/core/utils/logger.dart';
 import 'package:saferide/firebase_options.dart';
 
@@ -16,16 +17,29 @@ Future<void> main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  try {
+    // Initialize Firebase
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
 
-  // Initialize Hive local storage
-  final localStorage = LocalStorageService();
-  await localStorage.initialize();
+    // Initialize Hive local storage
+    final localStorage = LocalStorageService();
+    await localStorage.initialize();
 
-  AppLogger.info('App initialized', tag: 'Main');
+    // Initialize push notifications (FCM + local)
+    final notificationService = NotificationService();
+    await notificationService.initialize();
+
+    AppLogger.info('App initialized', tag: 'Main');
+  } catch (e, stack) {
+    AppLogger.critical(
+      'App initialization failed: $e',
+      tag: 'Main',
+      error: e,
+      stackTrace: stack,
+    );
+  }
 
   runApp(
     const ProviderScope(
