@@ -21,11 +21,14 @@ class BatteryService {
     _hasAlerted = false;
     _subscription = _battery.onBatteryStateChanged.listen(
       (_) async {
+        if (_hasAlerted) return;
         final level = await getBatteryLevel();
         if (level <= AppDimensions.lowBatteryThreshold &&
             !_hasAlerted) {
           _hasAlerted = true;
-          _lowBatteryController.add(level);
+          if (!_lowBatteryController.isClosed) {
+            _lowBatteryController.add(level);
+          }
           AppLogger.warning(
             'Low battery: $level%',
             tag: 'BatteryService',

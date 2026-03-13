@@ -40,16 +40,17 @@ class ShakeState {
   }
 }
 
-class ShakeNotifier extends StateNotifier<ShakeState> {
-  final StartShakeDetection _startShakeDetection;
-  final void Function() _onShakeTriggered;
+class ShakeNotifier extends Notifier<ShakeState> {
+  @override
+  ShakeState build() {
+    ref.onDispose(() {
+      stop();
+    });
+    return const ShakeState();
+  }
 
-  ShakeNotifier({
-    required StartShakeDetection startShakeDetection,
-    required void Function() onShakeTriggered,
-  })  : _startShakeDetection = startShakeDetection,
-        _onShakeTriggered = onShakeTriggered,
-        super(const ShakeState());
+  StartShakeDetection get _startShakeDetection =>
+      ref.read(startShakeDetectionProvider);
 
   /// Start shake detection. Shake events will forward to
   /// the panic trigger.
@@ -61,7 +62,7 @@ class ShakeNotifier extends StateNotifier<ShakeState> {
         state = state.copyWith(
           shakeCount: state.shakeCount + 1,
         );
-        _onShakeTriggered();
+        ref.read(panicNotifierProvider.notifier).startCountdown();
       },
     );
 
@@ -83,28 +84,9 @@ class ShakeNotifier extends StateNotifier<ShakeState> {
     _startShakeDetection.stop();
     state = const ShakeState();
   }
-
-  @override
-  void dispose() {
-    stop();
-    super.dispose();
-  }
 }
 
 final shakeNotifierProvider =
-    StateNotifierProvider<ShakeNotifier, ShakeState>(
-  (ref) {
-    final panicNotifier = ref.read(
-      panicNotifierProvider.notifier,
-    );
-
-    return ShakeNotifier(
-      startShakeDetection: ref.watch(
-        startShakeDetectionProvider,
-      ),
-      onShakeTriggered: () {
-        panicNotifier.startCountdown();
-      },
-    );
-  },
+    NotifierProvider<ShakeNotifier, ShakeState>(
+  ShakeNotifier.new,
 );

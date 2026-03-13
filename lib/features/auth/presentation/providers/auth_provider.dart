@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:saferide/core/providers/firebase_providers.dart';
 import 'package:saferide/features/auth/data/datasources/auth_remote_datasource.dart';
@@ -57,12 +55,14 @@ enum AuthStatus {
 class AuthState {
   final AuthStatus status;
   final String? verificationId;
+  final String? phoneNumber;
   final UserEntity? user;
   final String? errorMessage;
 
   const AuthState({
     this.status = AuthStatus.initial,
     this.verificationId,
+    this.phoneNumber,
     this.user,
     this.errorMessage,
   });
@@ -70,6 +70,7 @@ class AuthState {
   AuthState copyWith({
     AuthStatus? status,
     String? verificationId,
+    String? phoneNumber,
     UserEntity? user,
     String? errorMessage,
   }) {
@@ -77,40 +78,48 @@ class AuthState {
       status: status ?? this.status,
       verificationId:
           verificationId ?? this.verificationId,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
       user: user ?? this.user,
       errorMessage: errorMessage ?? this.errorMessage,
     );
   }
 }
 
-class AuthNotifier extends StateNotifier<AuthState> {
-  final SendOtp _sendOtp;
-  final VerifyOtp _verifyOtp;
-  final sign_out_usecase.SignOut _signOut;
+class AuthNotifier extends Notifier<AuthState> {
+  @override
+  AuthState build() {
+    return const AuthState();
+  }
 
-  AuthNotifier({
-    required SendOtp sendOtp,
-    required VerifyOtp verifyOtp,
-    required sign_out_usecase.SignOut signOut,
-  })  : _sendOtp = sendOtp,
-        _verifyOtp = verifyOtp,
-        _signOut = signOut,
-        super(const AuthState());
+  SendOtp get _sendOtp => ref.read(sendOtpProvider);
+  VerifyOtp get _verifyOtp =>
+      ref.read(verifyOtpProvider);
+  sign_out_usecase.SignOut get _signOut =>
+      ref.read(signOutProvider);
 
   Future<void> sendOtp(String phoneNumber) async {
-    state = state.copyWith(status: AuthStatus.sendingOtp);
+    state = state.copyWith(
+      status: AuthStatus.sendingOtp,
+      phoneNumber: phoneNumber,
+    );
 
     final result = await _sendOtp(phoneNumber);
     result.fold(
       (failure) => state = state.copyWith(
         status: AuthStatus.error,
-        errorMessage: failure.message,
+        errorMessage: _mapErrorMessage(failure.message),
       ),
       (verificationId) => state = state.copyWith(
         status: AuthStatus.otpSent,
         verificationId: verificationId,
       ),
     );
+  }
+
+  Future<void> resendOtp() async {
+    final phone = state.phoneNumber;
+    if (phone == null || phone.isEmpty) return;
+    await sendOtp(phone);
   }
 
   Future<void> verifyOtp(String otp) async {
@@ -125,7 +134,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     result.fold(
       (failure) => state = state.copyWith(
         status: AuthStatus.error,
-        errorMessage: failure.message,
+        errorMessage: _mapErrorMessage(failure.message),
       ),
       (user) => state = state.copyWith(
         status: AuthStatus.authenticated,
@@ -141,6 +150,34 @@ class AuthNotifier extends StateNotifier<AuthState> {
     );
   }
 
+  String _mapErrorMessage(String code) {
+    switch (code) {
+      case 'invalid-phone-number':
+        return 'The phone number entered is invalid. '
+            'Please check and try again.';
+      case 'too-many-requests':
+        return 'Too many attempts. '
+            'Please wait a moment and try again.';
+      case 'session-expired':
+        return 'Your verification session has expired. '
+            'Please request a new OTP.';
+      case 'invalid-verification-code':
+        return 'The OTP you entered is incorrect. '
+            'Please try again.';
+      case 'quota-exceeded':
+        return 'SMS quota exceeded. '
+            'Please try again later.';
+      case 'network-request-failed':
+        return 'Network error. '
+            'Please check your connection and try again.';
+      case 'user-disabled':
+        return 'This account has been disabled. '
+            'Please contact support.';
+      default:
+        return 'Something went wrong. Please try again.';
+    }
+  }
+
   void clearError() {
     state = state.copyWith(
       status: AuthStatus.initial,
@@ -150,10 +187,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
 }
 
 final authNotifierProvider =
-    StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier(
-    sendOtp: ref.watch(sendOtpProvider),
-    verifyOtp: ref.watch(verifyOtpProvider),
-    signOut: ref.watch(signOutProvider),
-  );
-});
+    NotifierProvider<AuthNotifier, AuthState>(
+  AuthNotifier.new,
+);

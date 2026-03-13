@@ -158,15 +158,10 @@ class AlertsState {
   }
 }
 
-/// StateNotifier that runs periodic route, speed, and
+/// Notifier that runs periodic route, speed, and
 /// battery checks during an active ride. Triggers
 /// appropriate responses based on threat level.
-class AlertsNotifier extends StateNotifier<AlertsState> {
-  final CheckRouteDeviation _checkRouteDeviation;
-  final CheckSpeedAnomaly _checkSpeedAnomaly;
-  final CheckLowBattery _checkLowBattery;
-  final AlertsRepository _repository;
-
+class AlertsNotifier extends Notifier<AlertsState> {
   static const _tag = 'AlertsNotifier';
 
   Timer? _monitoringTimer;
@@ -191,16 +186,26 @@ class AlertsNotifier extends StateNotifier<AlertsState> {
   List<({double lat, double lon})> _expectedRoute =
       const [];
 
-  AlertsNotifier({
-    required CheckRouteDeviation checkRouteDeviation,
-    required CheckSpeedAnomaly checkSpeedAnomaly,
-    required CheckLowBattery checkLowBattery,
-    required AlertsRepository repository,
-  })  : _checkRouteDeviation = checkRouteDeviation,
-        _checkSpeedAnomaly = checkSpeedAnomaly,
-        _checkLowBattery = checkLowBattery,
-        _repository = repository,
-        super(const AlertsState());
+  @override
+  AlertsState build() {
+    ref.onDispose(() {
+      _monitoringTimer?.cancel();
+      _countdownTimer?.cancel();
+    });
+    return const AlertsState();
+  }
+
+  CheckRouteDeviation get _checkRouteDeviation =>
+      ref.read(checkRouteDeviationProvider);
+
+  CheckSpeedAnomaly get _checkSpeedAnomaly =>
+      ref.read(checkSpeedAnomalyProvider);
+
+  CheckLowBattery get _checkLowBattery =>
+      ref.read(checkLowBatteryProvider);
+
+  AlertsRepository get _repository =>
+      ref.read(alertsRepositoryProvider);
 
   /// Start periodic monitoring for an active ride.
   Future<void> startMonitoring({
@@ -594,31 +599,11 @@ class AlertsNotifier extends StateNotifier<AlertsState> {
 
     onEscalate?.call();
   }
-
-  @override
-  void dispose() {
-    _monitoringTimer?.cancel();
-    _countdownTimer?.cancel();
-    super.dispose();
-  }
 }
 
 // ── Provider ──
 
 final alertsNotifierProvider =
-    StateNotifierProvider<AlertsNotifier, AlertsState>(
-  (ref) {
-    return AlertsNotifier(
-      checkRouteDeviation: ref.watch(
-        checkRouteDeviationProvider,
-      ),
-      checkSpeedAnomaly: ref.watch(
-        checkSpeedAnomalyProvider,
-      ),
-      checkLowBattery: ref.watch(
-        checkLowBatteryProvider,
-      ),
-      repository: ref.watch(alertsRepositoryProvider),
-    );
-  },
+    NotifierProvider<AlertsNotifier, AlertsState>(
+  AlertsNotifier.new,
 );

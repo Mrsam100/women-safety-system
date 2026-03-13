@@ -30,8 +30,8 @@ class UserModel {
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      uid: json['uid'] as String,
-      phoneNumber: json['phoneNumber'] as String,
+      uid: json['uid'] as String? ?? '',
+      phoneNumber: json['phoneNumber'] as String? ?? '',
       displayName: json['displayName'] as String?,
       photoUrl: json['photoUrl'] as String?,
       bloodGroup: json['bloodGroup'] as String?,
@@ -41,9 +41,11 @@ class UserModel {
       alertSensitivity:
           json['alertSensitivity'] as String? ?? 'medium',
       createdAt:
-          (json['createdAt'] as Timestamp).toDate(),
+          (json['createdAt'] as Timestamp?)?.toDate() ??
+              DateTime.now(),
       updatedAt:
-          (json['updatedAt'] as Timestamp).toDate(),
+          (json['updatedAt'] as Timestamp?)?.toDate() ??
+              DateTime.now(),
     );
   }
 

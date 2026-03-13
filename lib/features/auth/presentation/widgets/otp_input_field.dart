@@ -16,10 +16,10 @@ class OtpInputField extends StatefulWidget {
   });
 
   @override
-  State<OtpInputField> createState() => _OtpInputFieldState();
+  State<OtpInputField> createState() => OtpInputFieldState();
 }
 
-class _OtpInputFieldState extends State<OtpInputField> {
+class OtpInputFieldState extends State<OtpInputField> {
   late final List<TextEditingController> _controllers;
   late final List<FocusNode> _focusNodes;
 
@@ -49,6 +49,15 @@ class _OtpInputFieldState extends State<OtpInputField> {
 
   String get _otp =>
       _controllers.map((c) => c.text).join();
+
+  void clear() {
+    for (final c in _controllers) {
+      c.clear();
+    }
+    if (_focusNodes.isNotEmpty) {
+      _focusNodes.first.requestFocus();
+    }
+  }
 
   void _onChanged(int index, String value) {
     if (value.isNotEmpty && index < widget.length - 1) {

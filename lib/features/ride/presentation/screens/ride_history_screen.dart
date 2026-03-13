@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:saferide/core/constants/app_colors.dart';
@@ -11,12 +12,7 @@ import 'package:saferide/features/ride/presentation/widgets/ride_history_card.da
 /// Displays a scrollable list of past rides with
 /// pull-to-refresh and infinite scroll pagination.
 class RideHistoryScreen extends ConsumerStatefulWidget {
-  final String userId;
-
-  const RideHistoryScreen({
-    super.key,
-    required this.userId,
-  });
+  const RideHistoryScreen({super.key});
 
   @override
   ConsumerState<RideHistoryScreen> createState() =>
@@ -27,6 +23,9 @@ class _RideHistoryScreenState
     extends ConsumerState<RideHistoryScreen> {
   final _scrollController = ScrollController();
 
+  String get _userId =>
+      FirebaseAuth.instance.currentUser?.uid ?? '';
+
   @override
   void initState() {
     super.initState();
@@ -36,7 +35,7 @@ class _RideHistoryScreenState
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref
           .read(rideHistoryNotifierProvider.notifier)
-          .loadHistory(userId: widget.userId);
+          .loadHistory(userId: _userId);
     });
   }
 
@@ -44,7 +43,7 @@ class _RideHistoryScreenState
     if (_isBottom) {
       ref
           .read(rideHistoryNotifierProvider.notifier)
-          .loadMore(userId: widget.userId);
+          .loadMore(userId: _userId);
     }
   }
 
@@ -118,7 +117,7 @@ class _RideHistoryScreenState
                       rideHistoryNotifierProvider
                           .notifier,
                     )
-                    .refresh(userId: widget.userId),
+                    .refresh(userId: _userId),
                 child: const Text('Retry'),
               ),
             ],
@@ -158,7 +157,7 @@ class _RideHistoryScreenState
               .read(
                 rideHistoryNotifierProvider.notifier,
               )
-              .refresh(userId: widget.userId),
+              .refresh(userId: _userId),
           child: ListView.builder(
             controller: _scrollController,
             padding: const EdgeInsets.symmetric(
@@ -184,7 +183,6 @@ class _RideHistoryScreenState
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => RideSummaryScreen(
-                      userId: widget.userId,
                       rideId: ride.id,
                     ),
                   ),

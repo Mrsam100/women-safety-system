@@ -36,18 +36,21 @@ class MapState {
   }
 }
 
-class MapNotifier extends StateNotifier<MapState> {
+class MapNotifier extends Notifier<MapState> {
   GoogleMapController? _mapController;
 
-  MapNotifier()
-      : super(
-          const MapState(
-            cameraPosition: CameraPosition(
-              target: LatLng(28.6139, 77.2090),
-              zoom: AppDimensions.defaultZoom,
-            ),
-          ),
-        );
+  @override
+  MapState build() {
+    ref.onDispose(() {
+      _mapController?.dispose();
+    });
+    return const MapState(
+      cameraPosition: CameraPosition(
+        target: LatLng(28.6139, 77.2090),
+        zoom: AppDimensions.defaultZoom,
+      ),
+    );
+  }
 
   /// Store the map controller for camera animations.
   void onMapCreated(GoogleMapController controller) {
@@ -209,15 +212,9 @@ class MapNotifier extends StateNotifier<MapState> {
       polylines: const {},
     );
   }
-
-  @override
-  void dispose() {
-    _mapController?.dispose();
-    super.dispose();
-  }
 }
 
 final mapNotifierProvider =
-    StateNotifierProvider<MapNotifier, MapState>(
-  (ref) => MapNotifier(),
+    NotifierProvider<MapNotifier, MapState>(
+  MapNotifier.new,
 );

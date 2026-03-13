@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:saferide/core/providers/firebase_providers.dart';
 import 'package:saferide/core/providers/service_providers.dart';
@@ -109,13 +108,14 @@ class PanicState {
   }
 }
 
-class PanicNotifier extends StateNotifier<PanicState> {
-  final TriggerPanic _triggerPanic;
+class PanicNotifier extends Notifier<PanicState> {
+  @override
+  PanicState build() {
+    return const PanicState();
+  }
 
-  PanicNotifier({
-    required TriggerPanic triggerPanic,
-  })  : _triggerPanic = triggerPanic,
-        super(const PanicState());
+  TriggerPanic get _triggerPanic =>
+      ref.read(triggerPanicUseCaseProvider);
 
   /// Start the panic countdown (3 seconds).
   void startCountdown() {
@@ -179,10 +179,6 @@ class PanicNotifier extends StateNotifier<PanicState> {
 }
 
 final panicNotifierProvider =
-    StateNotifierProvider<PanicNotifier, PanicState>(
-  (ref) {
-    return PanicNotifier(
-      triggerPanic: ref.watch(triggerPanicUseCaseProvider),
-    );
-  },
+    NotifierProvider<PanicNotifier, PanicState>(
+  PanicNotifier.new,
 );

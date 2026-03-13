@@ -86,6 +86,7 @@ class _PhoneInputScreenState
                 PhoneInputField(
                   controller: _phoneController,
                   onSubmitted: _onSendOtp,
+                  validator: Validators.validatePhone,
                 ),
                 const Spacer(),
                 AppButton(

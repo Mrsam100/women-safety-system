@@ -3,18 +3,37 @@ import 'dart:developer' as dev;
 import 'package:flutter/foundation.dart';
 
 abstract final class AppLogger {
+  static final _phonePattern = RegExp(r'\+?[0-9]{10,15}');
+
+  static String _redactSensitiveData(String message) {
+    return message.replaceAll(_phonePattern, '[REDACTED]');
+  }
+
   static void debug(String message, {String? tag}) {
     if (kDebugMode) {
-      dev.log(message, name: tag ?? 'SafeRide');
+      dev.log(
+        _redactSensitiveData(message),
+        name: tag ?? 'SafeRide',
+      );
     }
   }
 
   static void info(String message, {String? tag}) {
-    dev.log('[INFO] $message', name: tag ?? 'SafeRide');
+    if (kDebugMode) {
+      dev.log(
+        '[INFO] ${_redactSensitiveData(message)}',
+        name: tag ?? 'SafeRide',
+      );
+    }
   }
 
   static void warning(String message, {String? tag}) {
-    dev.log('[WARN] $message', name: tag ?? 'SafeRide');
+    if (kDebugMode) {
+      dev.log(
+        '[WARN] ${_redactSensitiveData(message)}',
+        name: tag ?? 'SafeRide',
+      );
+    }
   }
 
   static void error(
@@ -23,12 +42,14 @@ abstract final class AppLogger {
     Object? error,
     StackTrace? stackTrace,
   }) {
-    dev.log(
-      '[ERROR] $message',
-      name: tag ?? 'SafeRide',
-      error: error,
-      stackTrace: stackTrace,
-    );
+    if (kDebugMode) {
+      dev.log(
+        '[ERROR] ${_redactSensitiveData(message)}',
+        name: tag ?? 'SafeRide',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   static void critical(
@@ -38,7 +59,7 @@ abstract final class AppLogger {
     StackTrace? stackTrace,
   }) {
     dev.log(
-      '[CRITICAL] $message',
+      '[CRITICAL] ${_redactSensitiveData(message)}',
       name: tag ?? 'SafeRide',
       error: error,
       stackTrace: stackTrace,

@@ -19,7 +19,7 @@ abstract class Failure {
           code == other.code;
 
   @override
-  int get hashCode => message.hashCode ^ code.hashCode;
+  int get hashCode => message.hashCode ^ (code?.hashCode ?? 0);
 }
 
 class ServerFailure extends Failure {

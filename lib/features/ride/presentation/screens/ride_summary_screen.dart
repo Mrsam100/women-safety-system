@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -10,12 +11,10 @@ import 'package:saferide/features/ride/presentation/providers/ride_provider.dart
 /// Displays a post-ride summary with a static map of
 /// the route, timeline of events, and safety score.
 class RideSummaryScreen extends ConsumerStatefulWidget {
-  final String userId;
   final String rideId;
 
   const RideSummaryScreen({
     super.key,
-    required this.userId,
     required this.rideId,
   });
 
@@ -31,6 +30,9 @@ class _RideSummaryScreenState
   bool _isLoading = true;
   String? _error;
 
+  String get _userId =>
+      FirebaseAuth.instance.currentUser?.uid ?? '';
+
   @override
   void initState() {
     super.initState();
@@ -41,7 +43,7 @@ class _RideSummaryScreenState
     final repo = ref.read(rideRepositoryProvider);
 
     final rideResult = await repo.getRide(
-      userId: widget.userId,
+      userId: _userId,
       rideId: widget.rideId,
     );
 
@@ -54,7 +56,7 @@ class _RideSummaryScreenState
       },
       (ride) async {
         final pointsResult = await repo.getRoutePoints(
-          userId: widget.userId,
+          userId: _userId,
           rideId: widget.rideId,
         );
 

@@ -1,3 +1,5 @@
+import '../utils/validators.dart';
+
 extension StringExtensions on String {
   String get capitalize {
     if (isEmpty) return this;
@@ -13,7 +15,11 @@ extension StringExtensions on String {
 
   String get initials {
     if (isEmpty) return '';
-    final words = trim().split(RegExp(r'\s+'));
+    final words = trim()
+        .split(RegExp(r'\s+'))
+        .where((w) => w.isNotEmpty)
+        .toList();
+    if (words.isEmpty) return '';
     if (words.length == 1) {
       return words[0][0].toUpperCase();
     }
@@ -28,15 +34,15 @@ extension StringExtensions on String {
   }
 
   String get cleanPhoneNumber {
-    return replaceAll(RegExp(r'[\s\-()]'), '');
+    return Validators.normalizePhoneNumber(this);
   }
 
   bool get isValidPhone {
-    final cleaned = cleanPhoneNumber;
-    return RegExp(r'^\+?[1-9]\d{9,14}$').hasMatch(cleaned);
+    final cleaned = Validators.cleanPhoneNumber(this);
+    return Validators.isValidPhone(cleaned);
   }
 
   bool get isValidOtp {
-    return RegExp(r'^\d{6}$').hasMatch(trim());
+    return Validators.isValidOtp(trim());
   }
 }

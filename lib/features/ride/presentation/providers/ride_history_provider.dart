@@ -51,15 +51,16 @@ class RideHistoryState {
 }
 
 class RideHistoryNotifier
-    extends StateNotifier<RideHistoryState> {
-  final GetRideHistory _getRideHistory;
-
+    extends Notifier<RideHistoryState> {
   static const _pageSize = 20;
 
-  RideHistoryNotifier({
-    required GetRideHistory getRideHistory,
-  })  : _getRideHistory = getRideHistory,
-        super(const RideHistoryState());
+  @override
+  RideHistoryState build() {
+    return const RideHistoryState();
+  }
+
+  GetRideHistory get _getRideHistory =>
+      ref.read(getRideHistoryUseCaseProvider);
 
   /// Load the first page of ride history.
   Future<void> loadHistory({
@@ -133,13 +134,7 @@ class RideHistoryNotifier
 }
 
 final rideHistoryNotifierProvider =
-    StateNotifierProvider<RideHistoryNotifier,
+    NotifierProvider<RideHistoryNotifier,
         RideHistoryState>(
-  (ref) {
-    return RideHistoryNotifier(
-      getRideHistory: ref.watch(
-        getRideHistoryUseCaseProvider,
-      ),
-    );
-  },
+  RideHistoryNotifier.new,
 );

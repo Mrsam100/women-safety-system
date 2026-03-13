@@ -44,7 +44,7 @@ class LocationService {
 
   void startTracking({
     int intervalMs = 10000,
-    double distanceFilter = 5,
+    int distanceFilter = 5,
   }) {
     _positionSubscription?.cancel();
     _positionSubscription = Geolocator.getPositionStream(

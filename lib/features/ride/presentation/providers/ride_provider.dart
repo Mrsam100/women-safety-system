@@ -120,36 +120,38 @@ class RideState {
   }
 }
 
-class RideNotifier extends StateNotifier<RideState> {
-  final StartRide _startRide;
-  final EndRide _endRide;
-  final CheckRouteDeviation _checkDeviation;
-  final RideRepository _repository;
-  final LocationService _locationService;
-  final BatteryService _batteryService;
-  final Ref _ref;
-
+class RideNotifier extends Notifier<RideState> {
   StreamSubscription<Position>? _locationSubscription;
   Timer? _deviationTimer;
 
   static const _tag = 'RideNotifier';
 
-  RideNotifier({
-    required StartRide startRide,
-    required EndRide endRide,
-    required CheckRouteDeviation checkDeviation,
-    required RideRepository repository,
-    required LocationService locationService,
-    required BatteryService batteryService,
-    required Ref ref,
-  })  : _startRide = startRide,
-        _endRide = endRide,
-        _checkDeviation = checkDeviation,
-        _repository = repository,
-        _locationService = locationService,
-        _batteryService = batteryService,
-        _ref = ref,
-        super(const RideState());
+  @override
+  RideState build() {
+    ref.onDispose(() {
+      _stopLocationTracking();
+      _deviationTimer?.cancel();
+    });
+    return const RideState();
+  }
+
+  StartRide get _startRide =>
+      ref.read(startRideUseCaseProvider);
+
+  EndRide get _endRide =>
+      ref.read(endRideUseCaseProvider);
+
+  CheckRouteDeviation get _checkDeviation =>
+      ref.read(checkRouteDeviationUseCaseProvider);
+
+  RideRepository get _repository =>
+      ref.read(rideRepositoryProvider);
+
+  LocationService get _locationService =>
+      ref.read(locationServiceProvider);
+
+  BatteryService get _batteryService =>
+      ref.read(batteryServiceProvider);
 
   /// Start a new ride at the current GPS position.
   Future<void> startRide({
@@ -196,10 +198,10 @@ class RideNotifier extends StateNotifier<RideState> {
           );
 
           // Update shared state
-          _ref.read(isRideActiveProvider.notifier)
-              .state = true;
-          _ref.read(activeRideIdProvider.notifier)
-              .state = ride.id;
+          ref.read(isRideActiveProvider.notifier)
+              .set(true);
+          ref.read(activeRideIdProvider.notifier)
+              .set(ride.id);
 
           // Start GPS tracking
           _startLocationTracking(userId, ride.id);
@@ -258,10 +260,10 @@ class RideNotifier extends StateNotifier<RideState> {
         );
 
         // Update shared state
-        _ref.read(isRideActiveProvider.notifier)
-            .state = false;
-        _ref.read(activeRideIdProvider.notifier)
-            .state = null;
+        ref.read(isRideActiveProvider.notifier)
+            .set(false);
+        ref.read(activeRideIdProvider.notifier)
+            .set(null);
 
         AppLogger.info(
           'Ride ${ride.id} ended',
@@ -393,32 +395,9 @@ class RideNotifier extends StateNotifier<RideState> {
       },
     );
   }
-
-  @override
-  void dispose() {
-    _stopLocationTracking();
-    _deviationTimer?.cancel();
-    super.dispose();
-  }
 }
 
 final rideNotifierProvider =
-    StateNotifierProvider<RideNotifier, RideState>(
-  (ref) {
-    return RideNotifier(
-      startRide: ref.watch(startRideUseCaseProvider),
-      endRide: ref.watch(endRideUseCaseProvider),
-      checkDeviation: ref.watch(
-        checkRouteDeviationUseCaseProvider,
-      ),
-      repository: ref.watch(rideRepositoryProvider),
-      locationService: ref.watch(
-        locationServiceProvider,
-      ),
-      batteryService: ref.watch(
-        batteryServiceProvider,
-      ),
-      ref: ref,
-    );
-  },
+    NotifierProvider<RideNotifier, RideState>(
+  RideNotifier.new,
 );

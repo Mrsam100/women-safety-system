@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:saferide/core/constants/app_colors.dart';
@@ -7,22 +8,18 @@ import 'package:saferide/core/providers/shared_providers.dart';
 import 'package:saferide/features/ride/presentation/providers/ride_provider.dart';
 import 'package:saferide/features/ride/presentation/widgets/ride_controls.dart';
 import 'package:saferide/features/ride/presentation/widgets/ride_map.dart';
-import 'package:saferide/features/safety/presentation/providers/panic_provider.dart';
 import 'package:saferide/features/safety/presentation/widgets/panic_button.dart';
 import 'package:saferide/features/safety/presentation/widgets/safety_status_indicator.dart';
 
 /// Full ride monitoring screen combining the live map,
 /// ride controls, panic button, and safety indicator.
 class RideScreen extends ConsumerWidget {
-  final String userId;
-
-  const RideScreen({
-    super.key,
-    required this.userId,
-  });
+  const RideScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final userId =
+        FirebaseAuth.instance.currentUser?.uid ?? '';
     final rideState = ref.watch(rideNotifierProvider);
     final threatScore = ref.watch(threatScoreProvider);
     final isActive = rideState.isActive;

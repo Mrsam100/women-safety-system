@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -28,9 +29,12 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     initialLocation: RouteNames.home,
-    debugLogDiagnostics: true,
+    debugLogDiagnostics: kDebugMode,
     redirect: (context, state) {
-      final isLoggedIn = authState.valueOrNull != null;
+      // Don't redirect while auth state is loading
+      if (authState.isLoading) return null;
+
+      final isLoggedIn = authState.value != null;
       final isAuthRoute =
           state.matchedLocation.startsWith(RouteNames.auth);
       final isOnboardingRoute =
@@ -92,9 +96,15 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: 'otp',
+            redirect: (context, state) {
+              if (state.extra == null) {
+                return RouteNames.auth;
+              }
+              return null;
+            },
             builder: (context, state) {
               final verificationId =
-                  state.extra as String? ?? '';
+                  state.extra as String;
               return OtpVerificationScreen(
                 verificationId: verificationId,
               );

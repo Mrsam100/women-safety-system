@@ -97,19 +97,20 @@ class EvidenceState {
   }
 }
 
-class EvidenceNotifier extends StateNotifier<EvidenceState> {
-  final EvidenceRepository _repository;
-  final SaveAudioEvidence _saveAudioEvidence;
-  final AutoDeleteOldData _autoDeleteOldData;
+class EvidenceNotifier extends Notifier<EvidenceState> {
+  @override
+  EvidenceState build() {
+    return const EvidenceState();
+  }
 
-  EvidenceNotifier({
-    required EvidenceRepository repository,
-    required SaveAudioEvidence saveAudioEvidence,
-    required AutoDeleteOldData autoDeleteOldData,
-  })  : _repository = repository,
-        _saveAudioEvidence = saveAudioEvidence,
-        _autoDeleteOldData = autoDeleteOldData,
-        super(const EvidenceState());
+  EvidenceRepository get _repository =>
+      ref.read(evidenceRepositoryProvider);
+
+  SaveAudioEvidence get _saveAudioEvidence =>
+      ref.read(saveAudioEvidenceProvider);
+
+  AutoDeleteOldData get _autoDeleteOldData =>
+      ref.read(autoDeleteOldDataProvider);
 
   /// Loads all audio evidence for a given ride.
   Future<void> loadEvidence(String rideId) async {
@@ -255,13 +256,7 @@ class EvidenceNotifier extends StateNotifier<EvidenceState> {
   }
 }
 
-final evidenceNotifierProvider = StateNotifierProvider<
-    EvidenceNotifier, EvidenceState>((ref) {
-  return EvidenceNotifier(
-    repository: ref.watch(evidenceRepositoryProvider),
-    saveAudioEvidence:
-        ref.watch(saveAudioEvidenceProvider),
-    autoDeleteOldData:
-        ref.watch(autoDeleteOldDataProvider),
-  );
-});
+final evidenceNotifierProvider =
+    NotifierProvider<EvidenceNotifier, EvidenceState>(
+  EvidenceNotifier.new,
+);

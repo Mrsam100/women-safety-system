@@ -19,6 +19,7 @@ class ShakeService {
   void startListening() {
     if (_isListening) return;
 
+    _subscription?.cancel();
     _isListening = true;
     _subscription = accelerometerEventStream().listen(
       _handleAccelerometerEvent,

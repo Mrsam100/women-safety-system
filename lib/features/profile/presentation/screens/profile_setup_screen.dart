@@ -140,7 +140,7 @@ class _ProfileSetupScreenState
           context.showSuccessSnackBar(
             'Profile saved successfully',
           );
-          context.go(RouteNames.emergencyContacts);
+          context.go(RouteNames.manageContacts);
         }
       },
     );

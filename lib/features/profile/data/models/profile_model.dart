@@ -22,15 +22,17 @@ class ProfileModel {
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) {
     return ProfileModel(
-      uid: json['uid'] as String,
+      uid: json['uid'] as String? ?? '',
       displayName: json['displayName'] as String? ?? '',
       photoUrl: json['photoUrl'] as String?,
       bloodGroup: json['bloodGroup'] as String?,
       medicalNotes: json['medicalNotes'] as String?,
       createdAt:
-          (json['createdAt'] as Timestamp).toDate(),
+          (json['createdAt'] as Timestamp?)?.toDate() ??
+              DateTime.now(),
       updatedAt:
-          (json['updatedAt'] as Timestamp).toDate(),
+          (json['updatedAt'] as Timestamp?)?.toDate() ??
+              DateTime.now(),
     );
   }
 

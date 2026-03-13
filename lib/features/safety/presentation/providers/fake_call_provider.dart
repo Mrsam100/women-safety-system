@@ -62,19 +62,23 @@ class FakeCallState {
   }
 }
 
-class FakeCallNotifier
-    extends StateNotifier<FakeCallState> {
-  final TriggerFakeCall _triggerFakeCall;
-
+class FakeCallNotifier extends Notifier<FakeCallState> {
   /// Callback invoked when the fake call fires.
   /// The presentation layer should navigate to the
   /// fake-call screen.
   void Function()? onFakeCallTriggered;
 
-  FakeCallNotifier({
-    required TriggerFakeCall triggerFakeCall,
-  })  : _triggerFakeCall = triggerFakeCall,
-        super(const FakeCallState());
+  @override
+  FakeCallState build() {
+    ref.onDispose(() {
+      state.timer?.cancel();
+      state.countdownTimer?.cancel();
+    });
+    return const FakeCallState();
+  }
+
+  TriggerFakeCall get _triggerFakeCall =>
+      ref.read(triggerFakeCallUseCaseProvider);
 
   /// Update the caller name shown on the fake call.
   void setCallerName(String name) {
@@ -168,22 +172,9 @@ class FakeCallNotifier
       delaySeconds: state.delaySeconds,
     );
   }
-
-  @override
-  void dispose() {
-    state.timer?.cancel();
-    state.countdownTimer?.cancel();
-    super.dispose();
-  }
 }
 
-final fakeCallNotifierProvider = StateNotifierProvider<
-    FakeCallNotifier, FakeCallState>(
-  (ref) {
-    return FakeCallNotifier(
-      triggerFakeCall: ref.watch(
-        triggerFakeCallUseCaseProvider,
-      ),
-    );
-  },
+final fakeCallNotifierProvider =
+    NotifierProvider<FakeCallNotifier, FakeCallState>(
+  FakeCallNotifier.new,
 );

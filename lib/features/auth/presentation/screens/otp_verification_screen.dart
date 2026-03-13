@@ -28,6 +28,7 @@ class _OtpVerificationScreenState
   String _otp = '';
   int _resendTimer = AppDimensions.otpResendSeconds;
   Timer? _timer;
+  final _otpFieldKey = GlobalKey<OtpInputFieldState>();
 
   @override
   void initState() {
@@ -76,6 +77,8 @@ class _OtpVerificationScreenState
 
     ref.listen<AuthState>(authNotifierProvider, (prev, next) {
       if (next.status == AuthStatus.error) {
+        _otpFieldKey.currentState?.clear();
+        _otp = '';
         context.showErrorSnackBar(
           next.errorMessage ?? AppStrings.authError,
         );
@@ -105,6 +108,7 @@ class _OtpVerificationScreenState
               ),
               const SizedBox(height: AppDimensions.paddingXL),
               OtpInputField(
+                key: _otpFieldKey,
                 onCompleted: _onOtpCompleted,
               ),
               const SizedBox(height: AppDimensions.paddingLG),
@@ -120,7 +124,10 @@ class _OtpVerificationScreenState
                     : TextButton(
                         onPressed: () {
                           _startResendTimer();
-                          // Re-trigger OTP send
+                          ref
+                              .read(authNotifierProvider
+                                  .notifier)
+                              .resendOtp();
                         },
                         child: const Text(
                           AppStrings.resendOtp,

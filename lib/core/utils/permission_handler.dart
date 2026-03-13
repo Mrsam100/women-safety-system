@@ -2,7 +2,12 @@ import 'package:permission_handler/permission_handler.dart';
 
 abstract final class AppPermissionHandler {
   static Future<bool> requestLocation() async {
-    final status = await Permission.locationWhenInUse.request();
+    var status = await Permission.locationWhenInUse.status;
+    if (status.isGranted) {
+      await Permission.locationAlways.request();
+      return true;
+    }
+    status = await Permission.locationWhenInUse.request();
     if (status.isGranted) {
       await Permission.locationAlways.request();
       return true;
@@ -17,11 +22,6 @@ abstract final class AppPermissionHandler {
 
   static Future<bool> requestContacts() async {
     final status = await Permission.contacts.request();
-    return status.isGranted;
-  }
-
-  static Future<bool> requestCamera() async {
-    final status = await Permission.camera.request();
     return status.isGranted;
   }
 

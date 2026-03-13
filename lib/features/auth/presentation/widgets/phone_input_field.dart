@@ -8,6 +8,7 @@ class PhoneInputField extends StatelessWidget {
   final String? errorText;
   final void Function(String)? onChanged;
   final VoidCallback? onSubmitted;
+  final String? Function(String?)? validator;
 
   const PhoneInputField({
     super.key,
@@ -15,6 +16,7 @@ class PhoneInputField extends StatelessWidget {
     this.errorText,
     this.onChanged,
     this.onSubmitted,
+    this.validator,
   });
 
   @override
@@ -33,6 +35,7 @@ class PhoneInputField extends StatelessWidget {
         ),
         LengthLimitingTextInputFormatter(15),
       ],
+      validator: validator,
       onChanged: onChanged,
       onSubmitted: (_) => onSubmitted?.call(),
     );

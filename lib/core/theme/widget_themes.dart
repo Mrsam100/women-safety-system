@@ -102,7 +102,7 @@ abstract final class WidgetThemes {
   );
 
   // Card
-  static final cardTheme = CardTheme(
+  static final cardTheme = CardThemeData(
     color: AppColors.surface,
     elevation: 2,
     shape: RoundedRectangleBorder(
@@ -114,7 +114,7 @@ abstract final class WidgetThemes {
     ),
   );
 
-  static final cardThemeDark = CardTheme(
+  static final cardThemeDark = CardThemeData(
     color: AppColors.surfaceDark,
     elevation: 2,
     shape: RoundedRectangleBorder(

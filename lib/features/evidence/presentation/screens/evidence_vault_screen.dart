@@ -10,7 +10,7 @@ class EvidenceVaultScreen extends ConsumerStatefulWidget {
 
   const EvidenceVaultScreen({
     super.key,
-    required this.rideId,
+    this.rideId = '',
   });
 
   @override

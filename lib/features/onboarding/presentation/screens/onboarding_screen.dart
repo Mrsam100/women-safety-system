@@ -83,8 +83,8 @@ class _OnboardingScreenState
   }
 
   void _completeOnboarding() {
-    ref.read(onboardingCompleteProvider.notifier).state =
-        true;
+    ref.read(onboardingCompleteProvider.notifier).set(
+        true);
     context.go(RouteNames.profileSetup);
   }
 

@@ -82,19 +82,18 @@ class ProfileState {
   }
 }
 
-class ProfileNotifier extends StateNotifier<ProfileState> {
-  final GetProfile _getProfile;
-  final UpdateProfile _updateProfile;
-  final UploadPhoto _uploadPhoto;
+class ProfileNotifier extends Notifier<ProfileState> {
+  @override
+  ProfileState build() {
+    return const ProfileState();
+  }
 
-  ProfileNotifier({
-    required GetProfile getProfile,
-    required UpdateProfile updateProfile,
-    required UploadPhoto uploadPhoto,
-  })  : _getProfile = getProfile,
-        _updateProfile = updateProfile,
-        _uploadPhoto = uploadPhoto,
-        super(const ProfileState());
+  GetProfile get _getProfile =>
+      ref.read(getProfileProvider);
+  UpdateProfile get _updateProfile =>
+      ref.read(updateProfileProvider);
+  UploadPhoto get _uploadPhoto =>
+      ref.read(uploadPhotoProvider);
 
   Future<void> loadProfile(String uid) async {
     state = state.copyWith(
@@ -151,7 +150,8 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
       (url) => state = state.copyWith(
         status: ProfileStatus.loaded,
         photoUrl: url,
-        profile: state.profile?.copyWith(photoUrl: url),
+        profile:
+            state.profile?.copyWith(photoUrl: url),
       ),
     );
   }
@@ -166,11 +166,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
   }
 }
 
-final profileNotifierProvider = StateNotifierProvider<
-    ProfileNotifier, ProfileState>((ref) {
-  return ProfileNotifier(
-    getProfile: ref.watch(getProfileProvider),
-    updateProfile: ref.watch(updateProfileProvider),
-    uploadPhoto: ref.watch(uploadPhotoProvider),
-  );
-});
+final profileNotifierProvider =
+    NotifierProvider<ProfileNotifier, ProfileState>(
+  ProfileNotifier.new,
+);

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -8,6 +9,9 @@ class NotificationService {
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
+
+  StreamSubscription<String>? _tokenRefreshSubscription;
+  int _notificationIdCounter = 0;
 
   String? _fcmToken;
   String? get fcmToken => _fcmToken;
@@ -24,12 +28,16 @@ class NotificationService {
     // Get FCM token
     _fcmToken = await _fcm.getToken();
     AppLogger.info(
-      'FCM token: $_fcmToken',
+      'FCM token obtained',
       tag: 'NotificationService',
     );
 
+    // Cancel existing subscription to prevent duplicates
+    await _tokenRefreshSubscription?.cancel();
+
     // Listen for token refresh
-    _fcm.onTokenRefresh.listen((token) {
+    _tokenRefreshSubscription =
+        _fcm.onTokenRefresh.listen((token) {
       _fcmToken = token;
       AppLogger.info(
         'FCM token refreshed',
@@ -51,7 +59,7 @@ class NotificationService {
       android: androidSettings,
       iOS: iosSettings,
     );
-    await _localNotifications.initialize(settings);
+    await _localNotifications.initialize(settings: settings);
 
     // Handle foreground messages
     FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
@@ -87,10 +95,10 @@ class NotificationService {
       android: androidDetails,
     );
     await _localNotifications.show(
-      DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      title,
-      body,
-      details,
+      id: _notificationIdCounter++,
+      title: title,
+      body: body,
+      notificationDetails: details,
       payload: payload,
     );
   }
@@ -104,5 +112,10 @@ class NotificationService {
       body: message,
       critical: true,
     );
+  }
+
+  Future<void> dispose() async {
+    await _tokenRefreshSubscription?.cancel();
+    _tokenRefreshSubscription = null;
   }
 }

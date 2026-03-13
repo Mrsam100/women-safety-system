@@ -17,7 +17,7 @@ class SafetyDashboard extends ConsumerWidget {
     final isEmergency = ref.watch(isEmergencyProvider);
     final threatScore = ref.watch(threatScoreProvider);
     final isOnlineAsync = ref.watch(isOnlineProvider);
-    final isOnline = isOnlineAsync.valueOrNull ?? true;
+    final isOnline = isOnlineAsync.value ?? true;
 
     final statusColor = _statusColor(
       isEmergency: isEmergency,

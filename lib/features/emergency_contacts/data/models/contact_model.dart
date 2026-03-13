@@ -26,12 +26,13 @@ class ContactModel {
   }) {
     return ContactModel(
       id: id,
-      name: json['name'] as String,
-      phoneNumber: json['phoneNumber'] as String,
-      relationship: json['relationship'] as String,
+      name: json['name'] as String? ?? '',
+      phoneNumber: json['phoneNumber'] as String? ?? '',
+      relationship: json['relationship'] as String? ?? '',
       hasApp: json['hasApp'] as bool? ?? false,
       fcmToken: json['fcmToken'] as String?,
-      createdAt: (json['createdAt'] as Timestamp).toDate(),
+      createdAt: (json['createdAt'] as Timestamp?)?.toDate() ??
+          DateTime.now(),
     );
   }
 

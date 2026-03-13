@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:saferide/core/providers/firebase_providers.dart';
 import 'package:saferide/features/emergency_contacts/data/datasources/contacts_remote_datasource.dart';
@@ -62,21 +61,22 @@ class ContactsState {
   }
 }
 
-// --------------- StateNotifier ---------------
+// --------------- Notifier ---------------
 
-class ContactsNotifier extends StateNotifier<ContactsState> {
-  final GetContacts _getContacts;
-  final AddContact _addContact;
-  final RemoveContact _removeContact;
+class ContactsNotifier extends Notifier<ContactsState> {
+  @override
+  ContactsState build() {
+    return const ContactsState();
+  }
 
-  ContactsNotifier({
-    required GetContacts getContacts,
-    required AddContact addContact,
-    required RemoveContact removeContact,
-  })  : _getContacts = getContacts,
-        _addContact = addContact,
-        _removeContact = removeContact,
-        super(const ContactsState());
+  GetContacts get _getContacts =>
+      ref.read(getContactsUseCaseProvider);
+
+  AddContact get _addContact =>
+      ref.read(addContactUseCaseProvider);
+
+  RemoveContact get _removeContact =>
+      ref.read(removeContactUseCaseProvider);
 
   Future<void> loadContacts(String userId) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
@@ -153,10 +153,6 @@ class ContactsNotifier extends StateNotifier<ContactsState> {
 // --------------- Provider ---------------
 
 final contactsProvider =
-    StateNotifierProvider<ContactsNotifier, ContactsState>((ref) {
-  return ContactsNotifier(
-    getContacts: ref.watch(getContactsUseCaseProvider),
-    addContact: ref.watch(addContactUseCaseProvider),
-    removeContact: ref.watch(removeContactUseCaseProvider),
-  );
-});
+    NotifierProvider<ContactsNotifier, ContactsState>(
+  ContactsNotifier.new,
+);

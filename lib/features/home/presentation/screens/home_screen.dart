@@ -20,7 +20,7 @@ class HomeScreen extends ConsumerWidget {
     final isRideActive = ref.watch(isRideActiveProvider);
     final theme = Theme.of(context);
 
-    final userName = authState.valueOrNull?.displayName;
+    final userName = authState.value?.displayName;
     final greeting = _greeting();
 
     return Scaffold(

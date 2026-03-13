@@ -38,13 +38,15 @@ class SettingsState {
   }
 }
 
-class SettingsNotifier extends StateNotifier<SettingsState> {
-  final SettingsRepository _repository;
-
-  SettingsNotifier(this._repository)
-      : super(const SettingsState()) {
+class SettingsNotifier extends Notifier<SettingsState> {
+  @override
+  SettingsState build() {
     _loadSettings();
+    return const SettingsState();
   }
+
+  SettingsRepository get _repository =>
+      ref.read(settingsRepositoryProvider);
 
   Future<void> _loadSettings() async {
     state = state.copyWith(isLoading: true);
@@ -180,12 +182,8 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
 }
 
 final settingsNotifierProvider =
-    StateNotifierProvider<SettingsNotifier, SettingsState>(
-  (ref) {
-    return SettingsNotifier(
-      ref.watch(settingsRepositoryProvider),
-    );
-  },
+    NotifierProvider<SettingsNotifier, SettingsState>(
+  SettingsNotifier.new,
 );
 
 /// Convenience provider for current settings.

@@ -3,7 +3,6 @@ import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:saferide/core/constants/app_dimensions.dart';
-import 'package:saferide/core/providers/service_providers.dart';
 import 'package:saferide/core/utils/logger.dart';
 import 'package:saferide/features/ai/data/datasources/tflite_datasource.dart';
 import 'package:saferide/features/ai/data/repositories/ai_repository_impl.dart';
@@ -103,7 +102,7 @@ class AiMonitoringState {
   }
 }
 
-// ─── AI StateNotifier ───
+// ─── AI Notifier ───
 
 /// Manages the AI monitoring lifecycle during an active
 /// ride. Runs keyword detection on audio chunks and
@@ -111,13 +110,8 @@ class AiMonitoringState {
 /// Connects to the auto-escalation engine to trigger
 /// safety actions based on the threat level.
 class AiMonitoringNotifier
-    extends StateNotifier<AiMonitoringState> {
+    extends Notifier<AiMonitoringState> {
   static const _tag = 'AiMonitoringNotifier';
-
-  final DetectKeywords _detectKeywords;
-  final CalculateThreatScore _calculateThreatScore;
-  final AutoEscalate _autoEscalate;
-  final AiRepositoryImpl _repository;
 
   Timer? _scoringTimer;
 
@@ -126,16 +120,26 @@ class AiMonitoringNotifier
   ThreatSignalInput _currentSignals =
       const ThreatSignalInput();
 
-  AiMonitoringNotifier({
-    required DetectKeywords detectKeywords,
-    required CalculateThreatScore calculateThreatScore,
-    required AutoEscalate autoEscalate,
-    required AiRepositoryImpl repository,
-  })  : _detectKeywords = detectKeywords,
-        _calculateThreatScore = calculateThreatScore,
-        _autoEscalate = autoEscalate,
-        _repository = repository,
-        super(AiMonitoringState.initial());
+  @override
+  AiMonitoringState build() {
+    ref.onDispose(() {
+      _scoringTimer?.cancel();
+      _scoringTimer = null;
+    });
+    return AiMonitoringState.initial();
+  }
+
+  DetectKeywords get _detectKeywords =>
+      ref.read(detectKeywordsUseCaseProvider);
+
+  CalculateThreatScore get _calculateThreatScore =>
+      ref.read(calculateThreatScoreUseCaseProvider);
+
+  AutoEscalate get _autoEscalate =>
+      ref.read(autoEscalateUseCaseProvider);
+
+  AiRepositoryImpl get _repository =>
+      ref.read(aiRepositoryProvider) as AiRepositoryImpl;
 
   /// Start AI monitoring for an active ride.
   ///
@@ -437,35 +441,13 @@ class AiMonitoringNotifier
       _recalculateScore();
     }
   }
-
-  @override
-  void dispose() {
-    stopMonitoring();
-    super.dispose();
-  }
 }
 
 // ─── Provider ───
 
-final aiMonitoringNotifierProvider =
-    StateNotifierProvider<AiMonitoringNotifier,
-        AiMonitoringState>(
-  (ref) {
-    final repository = ref.watch(aiRepositoryProvider)
-        as AiRepositoryImpl;
-    return AiMonitoringNotifier(
-      detectKeywords: ref.watch(
-        detectKeywordsUseCaseProvider,
-      ),
-      calculateThreatScore: ref.watch(
-        calculateThreatScoreUseCaseProvider,
-      ),
-      autoEscalate: ref.watch(
-        autoEscalateUseCaseProvider,
-      ),
-      repository: repository,
-    );
-  },
+final aiMonitoringNotifierProvider = NotifierProvider<
+    AiMonitoringNotifier, AiMonitoringState>(
+  AiMonitoringNotifier.new,
 );
 
 /// Convenience provider that exposes just the current
